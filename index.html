@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Today'sTaskTracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        }
+
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body {
+            overflow: hidden;
+            background: #f5f5f7;
+        }
+
+        /* 全体を左右に分割 */
+        #main {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 右側のメイン領域*/
+        #todayArea {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #timebar {
+            color: #333;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            /* 中身を中央揃え */
+            gap: 12px;
+            width: 100%;
+        }
+
+        #timebar input[type="time"] {
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-family: inherit;
+            padding: 0;
+            height: auto;
+            appearance: textfield;
+            cursor: pointer;
+        }
+
+        #container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #calendarControls {
+            margin: 90px 0 30px 0;
+            display: flex;
+            /* 中のボタンとタイトルを中央に */
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #calendarControls button,
+        #newtask button {
+            background-color: #e0e0e5;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 16px;
+            color: #333;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #tasklist {
+            width: 30%;
+            max-width: 30%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #ccc;
+            /*border-radius: 12px 0 0 0;*/
+            height: 100%;
+            background: white;
+        }
+
+        #tasks-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 10px 10px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 追加：ボタン用の中央揃えラッパー */
+        #addBtnWrap {
+            display: flex;
+            justify-content: center;
+            padding: 12px 0;
+            /* 余白は好みで */
+        }
+
+        #mobileBar {
+            display: none;
+        }
+
+        @media screen and (max-width: 800px) {
+            #mobileBar {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                /* 中央揃え */
+                gap: 8px;
+                padding: 8px 12px;
+                background: #fff;
+                border-bottom: 1px solid #eee;
+            }
+
+            /* 移設後も中身が中央に見えるように */
+            #mobileBar #calendarControls {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 10px;
+                margin: 0;
+            }
+
+            #mobileBar #timebar {
+                gap: 12px;
+                width: 100%;
+                padding: 6px 0;
+            }
+
+            #left-sidebar {
+                display: none !important;
+            }
+
+            #tasklist {
+                min-width: 60%;
+            }
+
+            #calendar {
+                width: 40% !important;
+            }
+
+            .omit-text {
+                display: none;
+            }
+        }
+
+        #tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .task {
+            padding: 8px;
+            border-radius: 5px;
+            box-shadow: 4px 4px 9px -2px rgba(0, 0, 0, 0.2);
+            /* 右方向だけに影 */
+        }
+
+        .done {
+            opacity: 0.5;
+            /*text-decoration: line-through;*/
+        }
+
+        .working {
+            border: 2px solid red;
+        }
+
+        #newtask {
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            background: #f5f5f7;
+            padding: 10px 16px;
+            max-width: 100%;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        #newtask input,
+        #newtask textarea {
+            height: 30px;
+            width: 100%;
+        }
+
+        #newtask button {
+            height: 30px;
+            width: 30px;
+        }
+
+        #newtask input {
+            margin-bottom: 5px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0px;
+        }
+
+        #title {
+            flex: 1;
+            max-width: 80%;
+        }
+
+        #estimate {
+            max-width: 20%;
+        }
+
+        #memo {
+            flex: 1;
+            max-width: 100%;
+            resize: none;
+        }
+
+        #calendar {
+            width: 70%;
+            overflow-y: auto;
+        }
+
+        /* 3日間のカレンダー列に境界線を追加 */
+        #calendar .fc-timegrid-col {
+            border-right: 2px solid #ccc;
+            /* 境界線の太さ・色は調整可 */
+        }
+
+        /* 最後の列は境界線を消す */
+        #calendar .fc-timegrid-col:last-child {
+            border-right: none;
+        }
+
+        .task-actions {
+            display: flex;
+            width: 100%;
+            margin-top: 6px;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            /* 丸みからはみ出る角を隠す */
+        }
+
+        .task-actions button {
+            flex: 1 1 25%;
+            border: none;
+            border-right: 1px solid #ccc;
+            padding: 3px 0;
+            font-size: 0.9em;
+            color: #333;
+            background: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        /* 最後のボタンは右ボーダーなし */
+        .task-actions button:last-child {
+            border-right: none;
+        }
+
+        .task-actions button:hover {
+            background: #f0f0f0;
+        }
+
+        .color-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin: 5px 0;
+        }
+
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .color-swatch.selected {
+            border: 2px solid black;
+        }
+
+        #calendar .fc .fc-scrollgrid,
+        #calendar .fc .fc-daygrid,
+        #calendar .fc .fc-timegrid,
+        #calendar .fc .fc-view-harness,
+        #calendar .fc .fc-view {
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        /* 本体（時間グリッド） */
+        #calendar .fc-timegrid-col:not(:last-child) .fc-timegrid-col-frame {
+            position: relative;
+        }
+
+        #calendar .fc-timegrid-col:not(:last-child) .fc-timegrid-col-frame::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: -1px;
+            border-right: 1px solid #ccc;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        /* ヘッダー（日付行）も同じ線で揃える */
+        #calendar .fc-col-header-cell {
+            position: relative;
+        }
+
+        #calendar .fc-scrollgrid-sync-inner,
+        #calendar .fc-timegrid-axis {
+            background-color: #fff !important;
+        }
+
+
+
+        /*
+        #calendar .fc-col-header {
+            display: none !important;
+        }
+*/
+        #calendar .fc-header-toolbar {
+            display: none !important;
+        }
+
+        .fc-timegrid-slot {
+            height: 90px !important;
+            background-color: #fff !important;
+        }
+
+        .fc-timegrid-slot-label {
+            background-color: white !important;
+        }
+
+        .fc-event {
+            border-width: 2px !important;
+        }
+
+        .fc-event-time {
+            font-size: larger !important;
+            color: black !important;
+        }
+
+        .fc-event-title {
+            color: black;
+            font-weight: bold;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            font-size: 18px;
+            user-select: none;
+            color: #999;
+        }
+
+        #dashboardBtn {
+            margin-left: 0;
+            /* 左に押しやる指定を解除 */
+            margin-right: 3px;
+            padding: 8px 8px;
+            background: #e0e0e5;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #floatingAddBtn {
+            position: static;
+            /* ← 固定をやめる */
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: rgba(216, 209, 209, 0.637);
+            color: white;
+            font-size: 32px;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: transform 0.2s ease;
+        }
+
+        #floatingAddBtn:hover {
+            transform: scale(1.15);
+        }
+
+        #left-sidebar {
+            max-width: 20%;
+            min-width: 200px;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            /* 縦並び */
+            flex-direction: column;
+            align-items: center;
+            background: #fff;
+            /* 影を綺麗に見せるための背景 */
+            position: relative;
+            /* z-index を効かせるため */
+            z-index: 1;
+            /* 右側要素より上に */
+            box-shadow: 8px 0 18px -10px rgba(0, 0, 0, 0.2);
+            /* 右方向だけに影 */
+        }
+
+        /* 土曜を青に */
+        .fc .fc-day-sat {
+            color: blue;
+        }
+
+        /* 日曜を赤に */
+        .fc .fc-day-sun {
+            color: red;
+        }
+
+        #miniCalendar {
+            margin-top: auto;
+            /* ← これで一番下へ押し下げる */
+            width: 100%;
+            /* 任意：横幅をサイドバーいっぱいに */
+            /* align-self: stretch; でもOK（width:100%の代替） */
+        }
+
+        /* FullCalendar ヘッダーボタンのスタイル調整 */
+        #miniCalendar .fc-button {
+            background-color: #e0e0e5 !important;
+            border: none !important;
+            color: #333 !important;
+            font-size: 14px;
+            padding: 4px 8px;
+            box-shadow: none !important;
+        }
+
+        /* ホバー時に少し濃く */
+        #miniCalendar .fc-button:hover {
+            background-color: #d5d5da !important;
+        }
+
+        #miniCalendar .fc-toolbar-title {
+            font-weight: normal !important;
+            /* 太字を解除 */
+            color: #666 !important;
+            font-size: 20px;
+        }
+
+        #calendarTitle {
+            font-size: 20px;
+        }
+
+        /* 選択中の日付（クリックされた日） */
+        #miniCalendar .selected-date {
+            background-color: #e9f7ff;
+            box-sizing: border-box;
+        }
+
+        .fc .fc-toolbar.fc-header-toolbar {
+            padding: 0 10px;
+            height: 69px !important;
+            margin-bottom: 0 !important;
+        }
+
+        #miniCalendar .fc-view-harness {
+            margin: 10px !important;
+            background-color: white;
+        }
+
+        /* メモ内の長いURLを強制改行して崩れを防ぐ */
+        .task .memo {
+            overflow-wrap: anywhere;
+            /* もっとも強力に折り返す */
+            word-break: break-word;
+            /* 古いブラウザ対策 */
+            white-space: pre-wrap;
+            /* メモの改行は保持 */
+        }
+
+        /* クリックできるリンクの見た目（任意） */
+        .task .memo a {
+            color: #06c;
+            text-decoration: underline;
+        }
+
+        /* 追加：タイトルリンクの見た目（任意） */
+        .task .title-link {
+            color: #06c;
+            text-decoration: underline;
+        }
+
+        .task .title-link:visited {
+            color: #551a8b;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="main">
+        <div id="left-sidebar">
+            <div id="calendarControls">
+                <button id="prevBtn">&lt;</button>
+                <span id="calendarTitle"></span>
+                <button id="nextBtn">&gt;</button>
+            </div>
+            <div id="timebar">
+                <button id="dashboardBtn">📊</button>
+                <div>
+                    <label>開始<span class="omit-text">時刻:</span> <input type="time" id="startTime" value="09:00"></label>
+                    <br><span>終了<span class="omit-text">予定:</span> <span id="endTimeDisplay">--:--</span></span>
+                </div>
+            </div>
+            <div id="miniCalendar"></div>
+        </div>
+        <div id="todayArea">
+            <div id="mobileBar"></div>
+            <div id="container">
+                <div id="tasklist">
+                    <div id="tasks-container">
+                        <div id="tasks"></div>
+                        <div id="addBtnWrap">
+                            <button id="floatingAddBtn" title="タスク追加（Alt+N）">＋</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="calendar">
+                    <div id="fc"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+    <script>
+        let myID;
+        let allTasks = [];
+        const colorList = [
+            "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9", "#C5CAE9", "#BBDEFB",
+            "#B2EBF2", "#B2DFDB", "#C8E6C9", "#DCEDC8", "#FFF9C4", "#FFECB3"
+        ];
+        let currentDate;
+        let calendar;
+        let editingId = null;
+
+        const tasksEl = document.getElementById("tasks");
+        const startInput = document.getElementById("startTime");
+        const endTimeDisplay = document.getElementById("endTimeDisplay");
+
+        let showTimer;
+        let selectedDate = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+        function getTasks(date) {
+            return allTasks.filter(t => t.date === date);
+        }
+
+        async function loadTasks() {
+            try {
+                const res = await fetch('load.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `id=${encodeURIComponent(myID)}`
+                });
+                if (!res.ok) throw new Error("読み込み失敗");
+                allTasks = await res.json();
+            } catch (e) {
+                console.error("タスク読み込みエラー:", e);
+                allTasks = JSON.parse(localStorage.getItem("allTasks"));
+            }
+        }
+
+        function saveTasks(date, tasks) {
+            // ① その日のタスクを除去 ② これから保存するIDも除去（移動で日付が変わっていても確実に消す）
+            const ids = new Set(tasks.map(t => t.id));
+            allTasks = allTasks
+                .filter(t => t.date !== date && !ids.has(t.id))
+                .concat(tasks);
+            localStorage.setItem("allTasks", JSON.stringify(allTasks));
+            fetch('save.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: myID, tasks: allTasks })
+            }).catch(e => {
+                console.error("タスク保存エラー:", e);
+            });
+            //console.table(allTasks);
+        }
+
+        function formatDiff(task) {
+            const diff = task.actual - task.estimate;
+            if (diff === 0) return '±0分';
+            return (diff > 0 ? '+' : '') + diff + '分';
+        }
+
+        function getDiffColor(task) {
+            const diff = task.actual - task.estimate;
+            if (diff > 0) return 'red';
+            if (diff < 0) return 'blue';
+            return 'gray';
+        }
+
+        function renderTasks() {
+            //const tasks = getTasks(currentDate);
+            const { tasks } = buildTimeline(currentDate);
+            tasksEl.innerHTML = "";
+            console.table(
+                tasks.map(t => ({
+                    title: t.title,
+                    startTime: t.startTime,
+                    plannedStart: t.plannedStart?.toTimeString().slice(0, 5),
+                    done: t.done,
+                    working: t.startTime > 0 && !t.done
+                }))
+            );
+            tasks.forEach(task => {
+                const div = document.createElement("div");
+                let classes = "task";
+                if (task.done) classes += " done";
+
+                if (task.startTime > 0 && !task.done) classes += " working";
+                div.className = classes;
+                div.style.background = task.color;
+
+                if (editingId === task.id) {
+                    // 完了済みタスクの開始・終了の初期値（存在しない/未完了なら空）
+                    const hasTimes = !!(task.done && task.startTime > 0);
+                    const startForUI = (() => {
+                        if (!hasTimes) return "";
+                        const d = new Date(task.startTime);
+                        return d.toTimeString().slice(0, 5); // "HH:MM"
+                    })();
+                    const endForUI = (() => {
+                        if (!hasTimes) return "";
+                        const end = new Date(task.startTime + (task.actual > 0 ? task.actual : task.estimate) * 60000);
+                        return end.toTimeString().slice(0, 5);
+                    })();
+
+                    div.innerHTML = `
+            <div class="row" style="gap:6px;margin-bottom:6px;">
+                <label style="font-size:16px;">
+                    <input type="date" id="editDate" value="${task.date}" style="height:30px;"
+                    ${(task.startTime > 0 && !task.done) ? "disabled" : ""}>
+                </label>
+              ${task.done ? `
+                <label style="font-size:16px;">開始
+                  <input type="time" id="editStartTime" value="${startForUI}" style="height:30px;">
+                </label>
+                <label style="font-size:16px;">終了
+                  <input type="time" id="editEndTime" value="${endForUI}" style="height:30px;">
+                </label>
+              ` : ``}
+            </div>
+            <input type="text" id="editTitle" style="width:80%;" value="${task.title}">            
+            <input type="number" id="editEstimate" style="width:calc(20% - 5px);"value="${task.estimate}">
+            <input type="url" id="editUrl" placeholder="URL" style="width:100%;margin-top:6px; value="${task.url ? decodeURIComponent(task.url) : ""}">
+
+            <div class="color-palette" id="colorPalette">
+                ${colorList.map(color => `
+                <div class="color-swatch${color === task.color ? ' selected' : ''}" 
+                style="background:${color}" 
+                data-color="${color}">
+                </div>`).join('')}
+            </div>
+            <textarea style="width:100%;resize:none;" id="editMemo" placeholder="メモ" >${task.memo || ""}</textarea><div class="task-actions">
+              <button onclick="saveEdit('${task.id}')">✓</button>
+              <button onclick="cancelEdit()">✕</button>
+            </div>
+          `;
+
+                    const swatches = div.querySelectorAll(".color-swatch");
+                    swatches.forEach(swatch => {
+                        swatch.addEventListener("click", () => {
+                            swatches.forEach(s => s.classList.remove("selected"));
+                            swatch.classList.add("selected");
+                        });
+                    });
+
+                    const estimateInput = div.querySelector("#editEstimate");
+                    estimateInput.addEventListener("keydown", e => {
+                        if (e.key === "Enter") {
+                            if (!estimateInput.value.trim() || estimateInput.value.trim() == 0) {
+                                estimateInput.value = "15";  // 空欄ならデフォルトで15
+                            }
+                            saveEdit(task.id);
+                        }
+                    });
+
+                    setTimeout(() => document.getElementById("editTitle")?.focus(), 50);
+
+                } else {
+                    div.innerHTML = `
+            <div>
+             <strong>${task.url
+                            ? `<a class="title-link" href="${decodeURIComponent(task.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(task.title)}</a>`
+                            : escapeHTML(task.title)
+                        }</strong>
+              <span style="float:right;font-size: 0.85em; color: #666;">                ${formatTime(task.plannedStart)}-${formatTime(task.plannedEnd)}
+              </span><br>
+              見${task.estimate}分/実${task.done ? task.actual : "?"}分
+              ${task.done ? `<span style="color: ${getDiffColor(task)};">(${formatDiff(task)})</span>` : ''}
+              <span style="float:right;" class="drag-handle" title="並べ替え">&#9776;</span>
+            </div>
+            <div>
+              <div class="memo">${task.memo ? escapeHTML(task.memo) : ""}</div>
+            <div class="task-actions">
+              <button onclick="startTask('${task.id}')" ${task.startTime > 0 ? 'disabled style="opacity:0.5; cursor: not-allowed;"' : ''}>▷</button>
+              <button onclick="interruptTask('${task.id}')" ${(task.done || task.startTime <= 0) ? 'disabled style="opacity:0.5; cursor: not-allowed;"' : 'style="background:#d8f6ff;"'}>❘❘</button>
+              <button onclick="finishTask('${task.id}')" ${(task.done || task.startTime <= 0) ? 'disabled style="opacity:0.5; cursor: not-allowed;"' : 'style="background:#d8f6ff;"'}>✓</button>
+              <button onclick="editTask('${task.id}')">↺</button>
+              <button onclick="deleteTask('${task.id}')">✕</button>
+            </div>
+          `;
+                }
+                div.dataset.id = task.id;
+                tasksEl.appendChild(div);
+            });
+            updateCalendar();
+            updateEndTime();
+        }
+
+        function computePlannedTimes() {
+            const tasks = getTasks(currentDate).sort((a, b) => a.order - b.order);
+            const base = new Date(`${currentDate}T${startInput.value}`);
+            let currentTime = new Date(base);
+
+            return tasks.map(t => {
+                let start, end;
+
+                if (t.startTime > 0) {
+                    start = new Date(t.startTime);
+                    const duration = t.done ? t.actual : t.estimate;
+                    end = new Date(start.getTime() + duration * 60000);
+                    currentTime = end; // 積み上げ継続
+                } else {
+                    start = new Date(currentTime);
+                    end = new Date(start.getTime() + t.estimate * 60000);
+                    currentTime = end;
+                }
+
+                return { ...t, plannedStart: start, plannedEnd: end };
+            });
+        }
+
+        function formatTime(d) {
+            return d.toTimeString().slice(0, 5);
+        }
+
+        function deleteTask(id) {
+            const tasks = getTasks(currentDate);
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                const updated = tasks.filter(t => t.id !== id);
+                saveTasks(currentDate, updated);
+                renderTasks();
+            }
+        }
+
+        function startTask(id) {
+            let tasks = getTasks(currentDate);
+            const taskIndex = tasks.findIndex(t => t.id === id);
+
+            if (taskIndex !== -1) {
+                const task = tasks[taskIndex];
+
+                const today = new Date().toISOString().slice(0, 10); // 例: "2025-05-05"
+                if (task.date !== today) {
+                    alert("本日のタスクしか開始できません。");
+                    return;
+                }
+
+                task.startTime = Date.now();
+                saveTasks(currentDate, tasks);
+                renderTasks();
+                requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
+                    refreshNowIndicator();
+                });
+            }
+        }
+
+        function refreshNowIndicator() {
+            if (!calendar) return;
+            // nowIndicator を作り直して位置を最新にする
+            calendar.setOption('nowIndicator', false);
+            calendar.setOption('nowIndicator', true);
+        }
+
+
+        function interruptTask(id) {
+            const tasks = getTasks(currentDate);
+            const taskIndex = tasks.findIndex(t => t.id === id);
+            if (taskIndex === -1) return;
+
+            const task = tasks[taskIndex];
+            if (!task.startTime || task.done) {
+                alert("開始していないか、すでに完了しています。");
+                return;
+            }
+
+            const now = Date.now();
+            const rawMinutes = (now - task.startTime) / 60000;
+            const actual = rawMinutes < 1 ? 1 : Math.floor(rawMinutes);
+
+            const originalEstimate = task.estimate;
+            const remaining = Math.max(1, originalEstimate - actual);
+
+            // 中断タスクを完了扱いに
+            task.actual = actual;
+            task.estimate = Math.min(task.estimate, actual);
+            task.done = true;
+            task.title += "（中断）";
+
+            // 次のタスクを探す（中断タスク以降で未完了・未開始）
+            const next = tasks.find((t, i) => i > taskIndex && !t.done && t.startTime === 0);
+
+            // 複製タスクを作成
+            const clone = {
+                ...task,
+                id: Date.now().toString(),
+                title: task.title.replace("（中断）", ""),
+                done: false,
+                startTime: 0,
+                actual: 0,
+                estimate: remaining,
+            };
+
+            // 挿入位置の order を決定
+            let insertOrder;
+            if (next) {
+                insertOrder = next.order + 0.5;
+            } else {
+                // 次のタスクがなければ末尾扱い（最大order + 1）
+                const maxOrder = Math.max(...tasks.map(t => t.order), 0);
+                insertOrder = maxOrder + 1;
+            }
+            clone.order = insertOrder;
+
+            tasks.push(clone);
+
+            // order に基づいて並べ替え & 再付番（整数化）
+            tasks.sort((a, b) => a.order - b.order);
+            tasks.forEach((t, i) => t.order = i);
+
+            saveTasks(currentDate, tasks);
+            renderTasks();
+            requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
+                refreshNowIndicator();
+            });
+        }
+
+        function finishTask(id) {
+            const tasks = getTasks(currentDate);
+            const task = tasks.find(t => t.id === id);
+            if (task && task.startTime) {
+                const rawMinutes = (Date.now() - task.startTime) / 60000;
+                const minutes = rawMinutes < 1 ? 1 : Math.floor(rawMinutes);
+                task.actual = minutes;
+                task.done = true;
+
+                const next = tasks.find(t => !t.done && t.id !== id && t.startTime === 0);
+
+                saveTasks(currentDate, tasks);
+                renderTasks();
+                requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
+                    refreshNowIndicator();
+                });
+            } else {
+                alert("開始していません");
+            }
+        }
+
+        function editTask(id) {
+            editingId = id;
+            renderTasks();
+            requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
+                refreshNowIndicator();
+            });
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            renderTasks();
+        }
+
+        function normalizeUrl(u) {
+            const s = (u || "").trim();
+            if (!s) return "";
+            // スキーマが無ければ https を付与
+            if (!/^https?:\/\//i.test(s)) return "https://" + s;
+            return s;
+        }
+
+        function saveEdit(id) {
+            const tasks = getTasks(currentDate);
+            const task = tasks.find(t => t.id === id);
+            const urlEl = document.getElementById("editUrl");
+            if (task) {
+                task.title = document.getElementById("editTitle").value.trim();
+                task.memo = document.getElementById("editMemo").value.trim();
+                if (urlEl) {
+                    // normalizeしてからエンコードして保存
+                    const norm = normalizeUrl(urlEl.value);
+                    task.url = norm ? encodeURIComponent(norm) : "";
+                }
+                // --- 日付（必ず編集可能） ---
+                const dateInputEl = document.getElementById("editDate");
+                if (dateInputEl && /^\d{4}-\d{2}-\d{2}$/.test(dateInputEl.value)) {
+                    task.date = dateInputEl.value; // ここで別日へ「移動」させる
+                    // saveEdit 内、task.date を更新した直後などに
+                    const moved = (task.date !== currentDate);
+                    if (moved) {
+                        const dest = getTasks(task.date);           // 移動先日の配列
+                        const maxOrder = dest.length ? Math.max(...dest.map(t => t.order)) : -1;
+                        task.order = maxOrder + 1;
+                    }
+                }
+                // 半角変換をここで適用
+                const rawEstimate = document.getElementById("editEstimate").value.trim();
+                const halfWidthEstimate = rawEstimate.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+
+                let est = parseInt(halfWidthEstimate, 10);
+                if (isNaN(est) || est <= 0) est = 15;
+                task.estimate = est;
+                const selectedColor = document.querySelector(".color-swatch.selected");
+                if (selectedColor) task.color = selectedColor.dataset.color;
+
+                // --- 完了済みタスクのみ：開始・終了の手編集を反映 ---
+                if (task.done) {
+                    const stEl = document.getElementById("editStartTime");
+                    const enEl = document.getElementById("editEndTime");
+                    const hasBoth = stEl && enEl && /^\d{2}:\d{2}$/.test(stEl.value) && /^\d{2}:\d{2}$/.test(enEl.value);
+                    if (hasBoth) {
+                        // 入力された日付（editDate）基準でタイムスタンプ計算
+                        const baseDate = dateInputEl && /^\d{4}-\d{2}-\d{2}$/.test(dateInputEl.value) ? dateInputEl.value : task.date;
+                        const startMs = new Date(`${baseDate}T${stEl.value}`).getTime();
+                        let endMs = new Date(`${baseDate}T${enEl.value}`).getTime();
+                        // 終了が開始以前なら「翌日」とみなす（深夜跨ぎ対応）
+                        if (endMs <= startMs) endMs += 24 * 60 * 60 * 1000;
+                        const minutes = Math.max(1, Math.round((endMs - startMs) / 60000));
+                        task.startTime = startMs;
+                        task.actual = minutes;
+                        task.done = true;  // 念のため維持
+                    }
+                }
+                saveTasks(currentDate, tasks);
+            }
+            editingId = null;
+            renderTasks();
+        }
+
+        function updateCalendar() {
+            const view = calendar.view;
+            const start = new Date(view.activeStart);
+            const end = new Date(view.activeEnd);
+            const events = [];
+
+            for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+                const ymd = d.toISOString().slice(0, 10);
+                const { tasks } = buildTimeline(ymd);
+
+                tasks.forEach(t => {
+                    events.push({
+                        title: t.title,
+                        start: t.plannedStart,
+                        end: t.plannedEnd,
+                        backgroundColor: t.done ? getPaleColor(t.color) : t.color,
+                        borderColor: t.done
+                            ? getPaleColor(t.color)
+                            : (t.startTime > 0 ? "red" : t.color),
+                        extendedProps: { task: t }
+                    });
+                });
+            }
+
+            calendar.batchRendering(() => {
+                calendar.removeAllEvents();
+                calendar.addEventSource(events);
+            });
+        }
+
+        // 元の色に対応する淡い色マッピング
+        function getPaleColor(hex) {
+            const paleMap = {
+                "#FFCDD2": "#FCE4EC",
+                "#F8BBD0": "#F3E5F5",
+                "#E1BEE7": "#EDE7F6",
+                "#D1C4E9": "#E8EAF6",
+                "#C5CAE9": "#E3F2FD",
+                "#BBDEFB": "#E1F5FE",
+                "#B2EBF2": "#E0F7FA",
+                "#B2DFDB": "#E0F2F1",
+                "#C8E6C9": "#F1F8E9",
+                "#DCEDC8": "#F9FBE7",
+                "#FFF9C4": "#FFFDE7",
+                "#FFECB3": "#FFF8E1"
+            };
+            return paleMap[hex] || "#eeeeee";
+        }
+
+
+        function updateEndTime() {
+            const tasks = getTasks(currentDate).sort((a, b) => a.order - b.order);
+            let latestEnd = new Date(`${currentDate}T${startInput.value}`);
+            const now = Date.now();
+
+            // 1) 完了済みタスクで最新終了時刻を進める
+            tasks.forEach(t => {
+                if (t.done && t.startTime && t.actual) {
+                    const end = new Date(t.startTime + t.actual * 60000);
+                    if (end > latestEnd) latestEnd = end;
+                }
+            });
+
+            // ★ 追加：今日なら「今」より前に戻らない
+            if (currentDate === new Date().toISOString().slice(0, 10)) {
+                const nowDate = new Date(now);
+
+                if (latestEnd < nowDate) {
+                    latestEnd = nowDate;
+                }
+            }
+            // 2) 未完了タスクを積み上げ（開始済みは「残り時間」で積む）
+            tasks.forEach(t => {
+                if (!t.done) {
+
+
+
+                    let addMin = t.estimate;
+                    if (t.startTime > 0) {
+                        const elapsed = Math.max(0, Math.floor((now - t.startTime) / 60000));
+                        addMin = Math.max(0, t.estimate - elapsed); // 残り時間
+                        // タスク開始時刻が latestEnd より後ならジャンプ
+                        const startedAt = new Date(t.startTime);
+                        if (startedAt > latestEnd) latestEnd = startedAt;
+                    }
+                    latestEnd = new Date(latestEnd.getTime() + addMin * 60000);
+                }
+            });
+
+            endTimeDisplay.textContent = latestEnd.toTimeString().slice(0, 5);
+        }
+
+        // 積み上げ計算
+        function buildTimeline(date, { useNow = true } = {}) {
+            const tasks = getTasks(date).slice().sort((a, b) => a.order - b.order);
+
+            const startBase = new Date(`${date}T${startInput.value}`);
+            let current = startBase;
+            let latestEnd = startBase;
+
+            const today = new Date().toISOString().slice(0, 10);
+            const now = new Date();
+
+            const result = [];
+
+            // ① 開始済みタスク
+            tasks.forEach(t => {
+                if (t.startTime > 0) {
+                    const start = new Date(t.startTime);
+                    const duration = t.done && t.actual > 0 ? t.actual : t.estimate;
+                    const end = new Date(start.getTime() + duration * 60000);
+
+                    result.push({ ...t, plannedStart: start, plannedEnd: end });
+
+                    if (end > latestEnd) latestEnd = end;
+                }
+            });
+
+            // ★ 今日 & 今が後ならジャンプ
+            if (useNow && date === today && now > latestEnd) {
+                current = now;
+            } else {
+                current = latestEnd;
+            }
+
+            // ② 未開始タスク
+            tasks.forEach(t => {
+                if (t.startTime === 0) {
+                    const start = new Date(current);
+                    const end = new Date(start.getTime() + t.estimate * 60000);
+
+                    result.push({ ...t, plannedStart: start, plannedEnd: end });
+                    current = end;
+                }
+            });
+
+            return {
+                tasks: result,
+                latestEnd: current
+            };
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            (async () => {
+                const urlParams = new URLSearchParams(location.search);
+
+                // myID 読み取り・プロンプト入力
+                myID = urlParams.get("id");
+                while (!myID || !/^[a-zA-Z0-9]+$/.test(myID)) {
+                    myID = prompt("IDを入力してください（半角英数字）");
+                }
+                urlParams.set("id", myID);
+                history.replaceState(null, "", "?" + urlParams.toString());
+
+                // 開始時刻復元
+                const paramStart = urlParams.get("start");
+                if (paramStart && /^\d{2}:\d{2}$/.test(paramStart)) {
+                    startInput.value = paramStart;
+                }
+
+                startInput.addEventListener("change", () => {
+                    calendar.setOption("slotMinTime", startInput.value + ":00");
+
+                    // startInput.value（例: "09:00"）をDateに変換
+                    const currentDate = new Date().toISOString().slice(0, 10); // 例: "2025-05-25"
+                    const startTime = new Date(`${currentDate}T${startInput.value}`);
+                    updateCalendar();
+                    updateEndTime();
+                    const params = new URLSearchParams(location.search);
+                    params.set("start", startInput.value);
+                    history.replaceState(null, "", "?" + params.toString());
+                });
+
+                await loadTasks();
+
+                const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+                let updated = false;
+
+                allTasks.forEach(task => {
+                    // 未開始・未完了・日付が過去のみを対象
+                    if (task.startTime === 0 && !task.done && task.date < todayStr) {
+                        task.date = todayStr;
+                        updated = true;
+                    }
+                });
+
+                if (updated) {
+                    localStorage.setItem("allTasks", JSON.stringify(allTasks));
+                    fetch('save.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: myID, tasks: allTasks })
+                    }).catch(e => {
+                        console.error("タスク保存エラー（過去タスク→今日）:", e);
+                    });
+                }
+
+                const titleEl = document.getElementById("calendarTitle");
+                calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
+                    initialView: 'timeGridThreeDay',
+                    height: '100%',
+                    slotMinTime: startInput.value + ":00",
+                    slotMaxTime: "33:00:00",
+                    nowIndicator: true,
+                    allDaySlot: false,
+                    locale: 'ja',
+                    editable: false,
+                    eventOverlap: true, // ← false にすると重ね表示できなくなるので true のままでよい
+                    eventOrderStrict: true,
+                    eventOrder: 'start,-duration,allDay,title',
+                    // ← 3日間のカスタムビューを追加
+                    views: {
+                        timeGridThreeDay: {
+                            type: 'timeGrid',
+                            duration: { days: 3 },      // 常に3日表示
+                            dateIncrement: { days: 1 }  // ＜/＞ボタンで1日ずつスライド
+                        }
+                    },
+                    datesSet(info) {
+                        // 3日間のうち先頭日だけ表示
+                        const startStr = info.startStr.slice(0, 10);
+                        currentDate = startStr; // 左のリストは先頭日を基準
+                        const youbi = ["日", "月", "火", "水", "木", "金", "土"];
+                        const s = new Date(startStr);
+                        titleEl.textContent = `${s.toLocaleDateString()}(${youbi[s.getDay()]})`;
+                        renderTasks();
+                    },
+                    eventDidMount(info) {
+                        const el = info.el;
+                        const task = info.event.extendedProps.task;
+
+                        // 開始・終了時間をフォーマット
+                        const formatTime = date => {
+                            const d = new Date(date);
+                            return d.toTimeString().slice(0, 5); // "HH:MM"
+                        };
+
+                        const start = formatTime(info.event.start);
+                        const end = formatTime(info.event.end);
+
+                        // HTMLのtitle属性に情報を表示
+                        el.title = task.memo
+                            ? `${start}-${end}\n${task.title}\n${task.memo}\n${task.done ? `見積 ${task.estimate}分 実績 ${task.actual}分` : `見積 ${task.estimate}分`}`
+                            : `${start}-${end}\n${task.title}\n${task.done ? `見積 ${task.estimate}分 実績 ${task.actual}分` : `見積 ${task.estimate}分`}`;
+                    }
+                });
+                calendar.render();
+                requestAnimationFrame(() => calendar.updateSize());
+
+                document.getElementById("prevBtn").onclick = () => {
+                    calendar.prev();
+                    updateSelectedDateAfterNav();
+                };
+
+                document.getElementById("nextBtn").onclick = () => {
+                    calendar.next();
+                    updateSelectedDateAfterNav();
+                };
+
+                function updateSelectedDateAfterNav() {
+                    const newDate = calendar.getDate(); // 表示中の日時（Date型）
+                    selectedDate = new Date(newDate.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10); // YYYY-MM-DD形式に
+                    highlightMiniCalendarDate(); // ミニカレンダーの選択枠を更新
+
+                    // ミニカレンダー側も表示月を切り替え（選択日が見えるように）
+                    miniCalendar.gotoDate(selectedDate);
+                }
+
+                new Sortable(tasksEl, {
+                    animation: 150,
+                    handle: ".drag-handle",  // ← ハンドルのみでドラッグ可能
+                    onEnd: () => {
+                        const ids = [...tasksEl.children].map(div => div.dataset.id);
+                        const tasks = getTasks(currentDate);
+                        ids.forEach((id, index) => {
+                            const task = tasks.find(t => t.id === id);
+                            if (task) task.order = index;
+                        });
+                        saveTasks(currentDate, tasks);
+                        updateCalendar();
+                        renderTasks();
+                    }
+                });
+
+                document.getElementById("dashboardBtn").addEventListener("click", () => {
+                    const urlParams = new URLSearchParams(location.search);
+                    const id = urlParams.get("id");
+                    if (id && /^[a-zA-Z0-9]+$/.test(id)) {
+                        location.href = `dashboard.html?id=${encodeURIComponent(id)}`;
+                    } else {
+                        alert("IDが無効です。");
+                    }
+                });
+
+                const addBtn = document.getElementById("floatingAddBtn");
+
+                function addNewTask() {
+                    const tasks = getTasks(currentDate);
+                    const newTask = {
+                        id: Date.now().toString(),
+                        date: currentDate,
+                        title: "",
+                        memo: "",
+                        url: "",
+                        done: false,
+                        color: colorList[tasks.length % colorList.length],
+                        estimate: 0,
+                        actual: 0,
+                        order: tasks.length,
+                        startTime: 0
+                    };
+                    tasks.push(newTask);
+                    saveTasks(currentDate, tasks);
+                    editingId = newTask.id;
+                    renderTasks();
+                    setTimeout(() => document.getElementById("editTitle")?.focus(), 50);
+                }
+
+                // クリックでも追加
+                addBtn.addEventListener("click", addNewTask);
+
+                // Alt+N で追加（入力中は無効）
+                window.addEventListener("keydown", (e) => {
+                    const tag = (e.target && e.target.tagName) || "";
+                    const typing =
+                        e.target?.isContentEditable ||
+                        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+                    if (typing) return;             // 入力中は発火しない
+                    if (e.repeat) return;           // 長押しの連打防止
+                    if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "n") {
+                        e.preventDefault();           // 既定動作を抑止（可能なら）
+                        addNewTask();
+                    }
+                });
+
+                function highlightMiniCalendarDate() {
+                    const todayStr = new Date().toISOString().slice(0, 10);
+
+                    document.querySelectorAll('#miniCalendar .fc-daygrid-day').forEach(cell => {
+                        const date = cell.getAttribute('data-date');
+                        cell.classList.remove('selected-date');
+                        cell.classList.remove('today-date');
+
+                        if (date === todayStr) {
+                            cell.classList.add('today-date');
+                        }
+                        if (date === selectedDate) {
+                            cell.classList.add('selected-date');
+                        }
+                    });
+                }
+
+                const miniCalendar = new FullCalendar.Calendar(document.getElementById("miniCalendar"), {
+                    initialView: 'dayGridMonth',
+                    height: 'auto',
+                    locale: 'ja',
+                    dayCellContent: function (arg) {
+                        // arg.date は Date オブジェクト、dayNumberText に「◯日」が入る
+                        // 「日」を取り除いて返す
+                        return arg.dayNumberText.replace('日', '');
+                    },
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: ''
+                    },
+                    dayHeaders: true,
+                    buttonText: {
+                        today: '今日'
+                    },
+                    dateClick(info) {
+                        selectedDate = info.dateStr;
+                        calendar.changeView('timeGridThreeDay', selectedDate);
+                        miniCalendar.refetchEvents();  // 選択強調を更新
+                        highlightMiniCalendarDate();   // 選択強調
+                    },
+                    datesSet() {
+                        highlightMiniCalendarDate();   // 月切替時も選択強調
+                    }
+                });
+                miniCalendar.render();
+
+                // ===== スマホ/PC 切替で要素を移設・ビュー変更 =====
+                const mql = window.matchMedia('(max-width: 800px)');
+
+                function ensureMobileBar() {
+                    let bar = document.getElementById('mobileBar');
+                    if (!bar) {
+                        bar = document.createElement('div');
+                        bar.id = 'mobileBar';
+                        // todayArea の container の直前に挿入
+                        const todayArea = document.getElementById('todayArea');
+                        const container = document.getElementById('container');
+                        if (todayArea && container) todayArea.insertBefore(bar, container);
+                    }
+                    return bar;
+                }
+
+                // 安全な移動ヘルパー
+                function move(node, parent, before = null) {
+                    if (!node || !parent) return;                 // ← null なら何もしない
+                    if (before && before.parentNode === parent) {
+                        parent.insertBefore(node, before);
+                    } else {
+                        parent.appendChild(node);
+                    }
+                }
+
+                function applyResponsive() {
+                    // その時点の DOM を都度取り直す（null 防止）
+                    const leftSidebar = document.getElementById('left-sidebar');
+                    const mobileBar = ensureMobileBar();
+                    const calCtrls = document.getElementById('calendarControls');
+                    const timebarEl = document.getElementById('timebar');
+                    const miniCalEl = document.getElementById('miniCalendar');
+
+                    if (mql.matches) {
+                        // スマホ：mobileBar へ移設
+                        move(calCtrls, mobileBar);
+                        move(timebarEl, mobileBar);
+                        if (calendar && calendar.view.type !== 'timeGridDay') {
+                            calendar.changeView('timeGridDay');
+                        }
+                    } else {
+                        // PC：left-sidebar に戻す（controls → timebar → miniCalendar の順序）
+                        move(calCtrls, leftSidebar, leftSidebar?.firstChild || null);
+                        move(timebarEl, leftSidebar, miniCalEl || null);
+                        if (calendar && calendar.view.type !== 'timeGridThreeDay') {
+                            calendar.changeView('timeGridThreeDay');
+                        }
+                    }
+                    // レイアウト確定後にサイズ再計算（右欠け対策）
+                    if (calendar) requestAnimationFrame(() => calendar.updateSize());
+                }
+
+                // 監視（古いSafari対策込み）
+                if (mql.addEventListener) mql.addEventListener('change', applyResponsive);
+                else mql.addListener(applyResponsive);
+
+                applyResponsive(); // 初回適用
+            })();
+
+        });
+
+        function escapeHTML(str) {
+            return (str ?? "").replace(/[&<>"']/g, s => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[s]));
+        }
+    </script>
+</body>
+
+</html>

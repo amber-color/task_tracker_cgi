@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        canvas {
+            max-width: 100%;
+            margin-bottom: 30px;
+            background: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        h1,
+        h2 {
+            margin-top: 30px;
+        }
+
+        label {
+            margin-right: 10px;
+        }
+
+        input[type="date"] {
+            margin-bottom: 10px;
+        }
+
+        table.dataTable {
+            background: white;
+            margin-top: 30px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        table.dataTable th,
+        table.dataTable td {
+            padding: 6px 10px;
+            text-align: center;
+        }
+
+        table.dataTable thead {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📊 タスクダッシュボード</h1>
+
+    <div>
+        <label>開始日: <input type="date" id="startDate"></label>
+        <label>終了日: <input type="date" id="endDate"></label>
+        <button onclick="loadData(currentId)">更新</button>
+    </div>
+
+    <h2>棒グラフ（日別 見積 vs 実績）</h2>
+    <canvas id="barChart"></canvas>
+
+    <h2>折れ線グラフ（日別 乖離の絶対値）</h2>
+    <canvas id="lineChart"></canvas>
+
+    <h2>タスク一覧</h2>
+    <table id="taskTable" class="display">
+        <thead>
+            <tr>
+                <th>開始日時</th>
+                <th>タイトル</th>
+                <th>見積</th>
+                <th>実績</th>
+                <th>乖離</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        let barChart = null, lineChart = null, dataTable = null, currentId = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const params = new URLSearchParams(location.search);
+            let id = params.get("id");
+            while (!id || !/^[a-zA-Z0-9]+$/.test(id)) {
+                id = prompt("ユーザーIDを入力してください（半角英数字）");
+            }
+            params.set("id", id);
+            history.replaceState(null, "", "?" + params.toString());
+            currentId = id;
+
+            const today = new Date();
+            const oneMonthAgo = new Date(today);
+            oneMonthAgo.setMonth(today.getMonth() - 1);
+
+            document.getElementById("startDate").value = oneMonthAgo.toISOString().slice(0, 10);
+            document.getElementById("endDate").value = today.toISOString().slice(0, 10);
+
+            loadData(id);
+        });
+
+        function loadData(id) {
+            fetch('load.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `id=${encodeURIComponent(id)}`
+            })
+                .then(res => res.json())
+                .then(tasks => renderDashboard(tasks))
+                .catch(err => alert("読み込み失敗: " + err));
+        }
+
+        function renderDashboard(tasks) {
+            const start = document.getElementById("startDate").value;
+            const end = document.getElementById("endDate").value;
+
+            const doneTasks = tasks.filter(t => t.done && t.date >= start && t.date <= end);
+            const tableRows = [];
+            const barMap = {};
+            const lineMap = {};
+
+            doneTasks.forEach(t => {
+                const diff = t.actual - t.estimate;
+
+                if (!barMap[t.date]) barMap[t.date] = { est: 0, act: 0 };
+                barMap[t.date].est += t.estimate;
+                barMap[t.date].act += t.actual;
+
+                if (!lineMap[t.date]) lineMap[t.date] = 0;
+                lineMap[t.date] += Math.abs(diff);
+
+                const color = diff < 0 ? 'blue' : diff > 0 ? 'red' : 'black';
+                const startDate = t.startTime ? new Date(t.startTime).toLocaleString() : "";
+                tableRows.push([
+                    startDate,
+                    t.title,
+                    t.estimate,
+                    t.actual,
+                    `<span style="color:${color}">${diff > 0 ? '+' : ''}${diff}</span>`
+                ]);
+            });
+
+            if (dataTable) {
+                dataTable.clear();
+                dataTable.rows.add(tableRows).draw();
+            } else {
+                dataTable = $('#taskTable').DataTable({
+                    data: tableRows,
+                    columns: [
+                        { title: "開始日時" },
+                        { title: "タイトル" },
+                        { title: "見積" },
+                        { title: "実績" },
+                        { title: "乖離" }
+                    ],
+                    paging: false,
+                    searching: false,
+                    order: [[0, 'desc']]
+                });
+            }
+
+            const dates = Object.keys(barMap).sort();
+            const estPerDay = dates.map(d => barMap[d].est);
+            const actPerDay = dates.map(d => barMap[d].act);
+            barChart = drawChart(barChart, "barChart", "bar", dates, [estPerDay, actPerDay], ["#90caf9", "#ef9a9a"], ["見積", "実績"]);
+
+            const lineValues = dates.map(d => lineMap[d] || 0);
+            lineChart = drawChart(lineChart, "lineChart", "line", dates, [lineValues], ["#66bb6a"], ["乖離"]);
+        }
+
+        function drawChart(ref, id, type, labels, datasets, colors, datasetLabels = []) {
+            if (ref && typeof ref.destroy === 'function') ref.destroy();
+            const ctx = document.getElementById(id).getContext("2d");
+            return new Chart(ctx, {
+                type,
+                data: {
+                    labels,
+                    datasets: datasets.map((data, i) => ({
+                        label: datasetLabels[i] || "",
+                        data,
+                        backgroundColor: type === "line" ? undefined : colors[i],
+                        borderColor: colors[i],
+                        fill: false,
+                        tension: 0.2
+                    }))
+                },
+                options: { responsive: true }
+            });
+        }
+    </script>
+</body>
+
+</html>
