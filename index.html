@@ -952,15 +952,18 @@
                 const { tasks } = buildTimeline(ymd);
 
                 tasks.forEach(t => {
-                    events.push({
-                        title: t.title,
-                        start: t.plannedStart,
-                        end: t.plannedEnd,
-                        backgroundColor: t.done ? getPaleColor(t.color) : t.color,
-                        borderColor: t.done
-                            ? getPaleColor(t.color)
-                            : (t.startTime > 0 ? "red" : t.color),
-                        extendedProps: { task: t }
+                    const segs = t.segments || [{ start: t.plannedStart, end: t.plannedEnd }];
+                    segs.forEach(seg => {
+                        events.push({
+                            title: t.title,
+                            start: seg.start,
+                            end: seg.end,
+                            backgroundColor: t.done ? getPaleColor(t.color) : t.color,
+                            borderColor: t.done
+                                ? getPaleColor(t.color)
+                                : (t.startTime > 0 ? "red" : t.color),
+                            extendedProps: { task: t }
+                        });
                     });
                 });
             }
@@ -1033,52 +1036,89 @@
             endTimeDisplay.textContent = latestEnd.toTimeString().slice(0, 5);
         }
 
+        // 固定タスクを障害物として自由タスクをセグメント分割して配置
+        function placeWithSegments(startDate, durationMin, obstacles) {
+            let remaining = durationMin;
+            let cursor = new Date(startDate);
+            const segments = [];
+
+            for (const obs of obstacles) {
+                if (remaining <= 0) break;
+                if (cursor >= obs.end) continue;
+                if (cursor >= obs.start) {
+                    cursor = new Date(obs.end);
+                    continue;
+                }
+                const availableMin = (obs.start - cursor) / 60000;
+                const consume = Math.min(remaining, availableMin);
+                segments.push({ start: new Date(cursor), end: new Date(cursor.getTime() + consume * 60000) });
+                remaining -= consume;
+                cursor = remaining > 0 ? new Date(obs.end) : new Date(cursor.getTime() + consume * 60000);
+            }
+
+            if (remaining > 0) {
+                segments.push({ start: new Date(cursor), end: new Date(cursor.getTime() + remaining * 60000) });
+                cursor = new Date(cursor.getTime() + remaining * 60000);
+            }
+
+            return { segments, finalEnd: cursor };
+        }
+
         // 積み上げ計算
         function buildTimeline(date, { useNow = true } = {}) {
             const tasks = getTasks(date).slice().sort((a, b) => a.order - b.order);
-
             const startBase = new Date(`${date}T${startTime}`);
             let latestEnd = startBase;
-
             const today = new Date().toISOString().slice(0, 10);
             const now = new Date();
-
             const result = [];
 
-            // ① 開始済みタスク
-            tasks.forEach(t => {
-                if (t.startTime > 0) {
-                    const start = new Date(t.startTime);
-                    const duration = t.done && t.actual > 0 ? t.actual : t.estimate;
-                    const end = new Date(start.getTime() + duration * 60000);
-                    result.push({ ...t, plannedStart: start, plannedEnd: end });
-                    if (end > latestEnd) latestEnd = end;
-                }
-            });
-
-            // ② 固定時刻タスク（scheduledTime あり・未開始）→ 時刻順に固定配置
-            const scheduledTasks = tasks
+            // 固定時刻の障害物（未開始の scheduledTime タスク）を収集
+            const obstacles = tasks
                 .filter(t => t.startTime === 0 && t.scheduledTime)
-                .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
-            scheduledTasks.forEach(t => {
-                const start = new Date(`${date}T${t.scheduledTime}`);
-                const end   = new Date(start.getTime() + t.estimate * 60000);
-                result.push({ ...t, plannedStart: start, plannedEnd: end });
+                .map(t => {
+                    const s = new Date(`${date}T${t.scheduledTime}`);
+                    return { start: s, end: new Date(s.getTime() + t.estimate * 60000) };
+                })
+                .sort((a, b) => a.start - b.start);
+
+            // ① 完了済みタスク → 実時刻で配置、分断なし（重なり許容）
+            tasks.filter(t => t.done && t.startTime > 0).forEach(t => {
+                const start = new Date(t.startTime);
+                const end = new Date(start.getTime() + (t.actual > 0 ? t.actual : t.estimate) * 60000);
+                const segments = [{ start, end }];
+                result.push({ ...t, plannedStart: start, plannedEnd: end, segments });
                 if (end > latestEnd) latestEnd = end;
             });
 
-            // now ジャンプ
+            // ② 開始済み・未完了タスク → 固定タスクで分断
+            tasks.filter(t => t.startTime > 0 && !t.done).forEach(t => {
+                const { segments, finalEnd } = placeWithSegments(new Date(t.startTime), t.estimate, obstacles);
+                result.push({ ...t, plannedStart: segments[0].start, plannedEnd: finalEnd, segments });
+                if (finalEnd > latestEnd) latestEnd = finalEnd;
+            });
+
+            // ③ 固定時刻タスク（未開始）→ scheduledTime に配置、分断なし
+            tasks.filter(t => t.startTime === 0 && t.scheduledTime)
+                .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
+                .forEach(t => {
+                    const start = new Date(`${date}T${t.scheduledTime}`);
+                    const end = new Date(start.getTime() + t.estimate * 60000);
+                    const segments = [{ start, end }];
+                    result.push({ ...t, plannedStart: start, plannedEnd: end, segments });
+                });
+
+            // now ジャンプ（固定タスクの end は latestEnd に含めない）
             let current = (useNow && date === today && now > latestEnd) ? now : latestEnd;
 
-            // ③ 自由タスク（scheduledTime なし・未開始）→ 順次積み上げ
+            // ④ 自由タスク（未開始・scheduledTime なし）→ 固定タスクで分断しながら積み上げ
             tasks.filter(t => t.startTime === 0 && !t.scheduledTime)
-                 .sort((a, b) => a.order - b.order)
-                 .forEach(t => {
-                     const start = new Date(current);
-                     const end   = new Date(start.getTime() + t.estimate * 60000);
-                     result.push({ ...t, plannedStart: start, plannedEnd: end });
-                     current = end;
-                 });
+                .sort((a, b) => a.order - b.order)
+                .forEach(t => {
+                    const { segments, finalEnd } = placeWithSegments(current, t.estimate, obstacles);
+                    result.push({ ...t, plannedStart: segments[0].start, plannedEnd: finalEnd, segments });
+                    current = finalEnd;
+                });
 
             return { tasks: result, latestEnd: current };
         }
