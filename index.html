@@ -304,26 +304,6 @@
             box-shadow: none !important;
         }
 
-        /* 本体（時間グリッド） */
-        #calendar .fc-timegrid-col:not(:last-child) .fc-timegrid-col-frame {
-            position: relative;
-        }
-
-        #calendar .fc-timegrid-col:not(:last-child) .fc-timegrid-col-frame::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            right: -1px;
-            border-right: 1px solid #ccc;
-            pointer-events: none;
-            z-index: 4;
-        }
-
-        /* ヘッダー（日付行）も同じ線で揃える */
-        #calendar .fc-col-header-cell {
-            position: relative;
-        }
 
         #calendar .fc-scrollgrid-sync-inner,
         #calendar .fc-timegrid-axis {
