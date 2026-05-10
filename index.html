@@ -1054,7 +1054,6 @@
             const tasks = getTasks(date).slice().sort((a, b) => a.order - b.order);
 
             const startBase = new Date(`${date}T${startTime}`);
-            let current = startBase;
             let latestEnd = startBase;
 
             const today = new Date().toISOString().slice(0, 10);
@@ -1068,35 +1067,36 @@
                     const start = new Date(t.startTime);
                     const duration = t.done && t.actual > 0 ? t.actual : t.estimate;
                     const end = new Date(start.getTime() + duration * 60000);
-
                     result.push({ ...t, plannedStart: start, plannedEnd: end });
-
                     if (end > latestEnd) latestEnd = end;
                 }
             });
 
-            // ★ 今日 & 今が後ならジャンプ
-            if (useNow && date === today && now > latestEnd) {
-                current = now;
-            } else {
-                current = latestEnd;
-            }
-
-            // ② 未開始タスク
-            tasks.forEach(t => {
-                if (t.startTime === 0) {
-                    const start = new Date(current);
-                    const end = new Date(start.getTime() + t.estimate * 60000);
-
-                    result.push({ ...t, plannedStart: start, plannedEnd: end });
-                    current = end;
-                }
+            // ② 固定時刻タスク（scheduledTime あり・未開始）→ 時刻順に固定配置
+            const scheduledTasks = tasks
+                .filter(t => t.startTime === 0 && t.scheduledTime)
+                .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
+            scheduledTasks.forEach(t => {
+                const start = new Date(`${date}T${t.scheduledTime}`);
+                const end   = new Date(start.getTime() + t.estimate * 60000);
+                result.push({ ...t, plannedStart: start, plannedEnd: end });
+                if (end > latestEnd) latestEnd = end;
             });
 
-            return {
-                tasks: result,
-                latestEnd: current
-            };
+            // now ジャンプ
+            let current = (useNow && date === today && now > latestEnd) ? now : latestEnd;
+
+            // ③ 自由タスク（scheduledTime なし・未開始）→ 順次積み上げ
+            tasks.filter(t => t.startTime === 0 && !t.scheduledTime)
+                 .sort((a, b) => a.order - b.order)
+                 .forEach(t => {
+                     const start = new Date(current);
+                     const end   = new Date(start.getTime() + t.estimate * 60000);
+                     result.push({ ...t, plannedStart: start, plannedEnd: end });
+                     current = end;
+                 });
+
+            return { tasks: result, latestEnd: current };
         }
 
         document.addEventListener("DOMContentLoaded", () => {
