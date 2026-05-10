@@ -2,6 +2,22 @@
 require_once __DIR__ . '/db.php';
 
 session_start();
+
+function requireAuth(): array {
+    if (empty($_SESSION['user_id'])) {
+        http_response_code(401);
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => false, 'error' => 'Unauthorized']);
+        exit;
+    }
+    return ['id' => $_SESSION['user_id'], 'username' => $_SESSION['username']];
+}
+
+// api.php など他ファイルから include された場合はここで停止
+if (realpath($_SERVER['SCRIPT_FILENAME']) !== realpath(__FILE__)) {
+    return;
+}
+
 header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -86,12 +102,3 @@ if ($action === 'login') {
 
 http_response_code(400);
 echo json_encode(['ok' => false, 'error' => '不正なアクション']);
-
-function requireAuth(): array {
-    if (empty($_SESSION['user_id'])) {
-        http_response_code(401);
-        echo json_encode(['ok' => false, 'error' => 'Unauthorized']);
-        exit;
-    }
-    return ['id' => $_SESSION['user_id'], 'username' => $_SESSION['username']];
-}

@@ -698,7 +698,27 @@
                 });
                 if (res.status === 401) { location.href = 'login.html'; return; }
                 if (!res.ok) throw new Error("読み込み失敗");
-                allTasks = await res.json();
+                const serverTasks = await res.json();
+
+                if (serverTasks.length === 0) {
+                    const localTasks = JSON.parse(localStorage.getItem("allTasks")) ?? [];
+                    if (localTasks.length > 0) {
+                        // DBが空でローカルにデータがある場合、DBへ移行する
+                        for (const task of localTasks) {
+                            await apiCall({ action: 'add', task });
+                        }
+                        const res2 = await fetch('api.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'load' })
+                        });
+                        allTasks = await res2.json();
+                        syncLocal();
+                        return;
+                    }
+                }
+
+                allTasks = serverTasks;
                 syncLocal();
             } catch (e) {
                 console.error("タスク読み込みエラー:", e);
@@ -841,13 +861,13 @@
                 return;
             }
             const result = await apiCall({ action: 'interrupt', id, now_ms: Date.now() });
-            if (result?.ok) {
-                const otherDays = allTasks.filter(t => t.date !== task.date);
-                allTasks = [...otherDays, ...result.tasks];
-                syncLocal();
-                renderTasks();
-                requestAnimationFrame(() => refreshNowIndicator());
-            }
+            if (!result) { alert("中断に失敗しました（通信エラー）"); return; }
+            if (!result.ok) { alert("中断に失敗しました: " + (result.error || "不明なエラー")); return; }
+            const otherDays = allTasks.filter(t => t.date !== task.date);
+            allTasks = [...otherDays, ...result.tasks];
+            syncLocal();
+            renderTasks();
+            requestAnimationFrame(() => refreshNowIndicator());
         }
 
         function finishTask(id) {
