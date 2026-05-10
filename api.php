@@ -512,9 +512,19 @@ if ($action === 'migrate_past') {
         exit;
     }
     $stmt = $pdo->prepare(
-        'UPDATE tasks SET date=? WHERE user_id=? AND date<? AND done=0 AND start_time=0'
+        'UPDATE tasks SET date=?
+         WHERE user_id=? AND date<? AND done=0 AND start_time=0
+         AND (
+             template_id IS NULL
+             OR NOT EXISTS (
+                 SELECT 1 FROM tasks t2
+                 WHERE t2.user_id = tasks.user_id
+                   AND t2.template_id = tasks.template_id
+                   AND t2.date = ?
+             )
+         )'
     );
-    $stmt->execute([$today, $userId, $today]);
+    $stmt->execute([$today, $userId, $today, $today]);
     echo json_encode(['ok' => true, 'updated' => $stmt->rowCount()]);
     exit;
 }
