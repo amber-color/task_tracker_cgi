@@ -530,6 +530,7 @@
                     <label>開始<span class="omit-text">時刻:</span> <input type="time" id="startTime" value="09:00"></label>
                     <br><span>終了<span class="omit-text">予定:</span> <span id="endTimeDisplay">--:--</span></span>
                 </div>
+                <button id="logoutBtn" title="ログアウト" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⏻</button>
             </div>
             <div id="miniCalendar"></div>
         </div>
@@ -555,7 +556,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
     <script>
-        let myID;
         let allTasks = [];
         const colorList = [
             "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9", "#C5CAE9", "#BBDEFB",
@@ -576,36 +576,40 @@
             return allTasks.filter(t => t.date === date);
         }
 
+        async function apiCall(body) {
+            try {
+                const res = await fetch('api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.status === 401) { location.href = 'login.html'; return null; }
+                return await res.json();
+            } catch (e) {
+                console.error('API error:', e);
+                return null;
+            }
+        }
+
+        function syncLocal() {
+            localStorage.setItem("allTasks", JSON.stringify(allTasks));
+        }
+
         async function loadTasks() {
             try {
-                const res = await fetch('load.php', {
+                const res = await fetch('api.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `id=${encodeURIComponent(myID)}`
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'load' })
                 });
+                if (res.status === 401) { location.href = 'login.html'; return; }
                 if (!res.ok) throw new Error("読み込み失敗");
                 allTasks = await res.json();
+                syncLocal();
             } catch (e) {
                 console.error("タスク読み込みエラー:", e);
                 allTasks = JSON.parse(localStorage.getItem("allTasks")) ?? [];
             }
-        }
-
-        function saveTasks(date, tasks) {
-            // ① その日のタスクを除去 ② これから保存するIDも除去（移動で日付が変わっていても確実に消す）
-            const ids = new Set(tasks.map(t => t.id));
-            allTasks = allTasks
-                .filter(t => t.date !== date && !ids.has(t.id))
-                .concat(tasks);
-            localStorage.setItem("allTasks", JSON.stringify(allTasks));
-            fetch('save.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: myID, tasks: allTasks })
-            }).catch(e => {
-                console.error("タスク保存エラー:", e);
-            });
-            //console.table(allTasks);
         }
 
         function formatDiff(task) {
@@ -759,35 +763,29 @@
         }
 
         function deleteTask(id) {
-            const tasks = getTasks(currentDate);
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                const updated = tasks.filter(t => t.id !== id);
-                saveTasks(currentDate, updated);
-                renderTasks();
-            }
+            const task = allTasks.find(t => t.id === id);
+            if (!task) return;
+            allTasks = allTasks.filter(t => t.id !== id);
+            syncLocal();
+            apiCall({ action: 'delete', id });
+            renderTasks();
         }
 
         function startTask(id) {
-            let tasks = getTasks(currentDate);
-            const taskIndex = tasks.findIndex(t => t.id === id);
+            const task = allTasks.find(t => t.id === id);
+            if (!task) return;
 
-            if (taskIndex !== -1) {
-                const task = tasks[taskIndex];
-
-                const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-                if (task.date !== today) {
-                    alert("本日のタスクしか開始できません。");
-                    return;
-                }
-
-                task.startTime = Date.now();
-                saveTasks(currentDate, tasks);
-                renderTasks();
-                requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
-                    refreshNowIndicator();
-                });
+            const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            if (task.date !== today) {
+                alert("本日のタスクしか開始できません。");
+                return;
             }
+
+            task.startTime = Date.now();
+            syncLocal();
+            apiCall({ action: 'update', id, fields: { startTime: task.startTime } });
+            renderTasks();
+            requestAnimationFrame(() => refreshNowIndicator());
         }
 
         function refreshNowIndicator() {
@@ -798,87 +796,32 @@
         }
 
 
-        function interruptTask(id) {
-            const tasks = getTasks(currentDate);
-            const taskIndex = tasks.findIndex(t => t.id === id);
-            if (taskIndex === -1) return;
-
-            const task = tasks[taskIndex];
-            if (!task.startTime || task.done) {
+        async function interruptTask(id) {
+            const task = allTasks.find(t => t.id === id);
+            if (!task || !task.startTime || task.done) {
                 alert("開始していないか、すでに完了しています。");
                 return;
             }
-
-            const now = Date.now();
-            const rawMinutes = (now - task.startTime) / 60000;
-            const actual = rawMinutes < 1 ? 1 : Math.floor(rawMinutes);
-
-            const originalEstimate = task.estimate;
-            const remaining = Math.max(1, originalEstimate - actual);
-
-            // 中断タスクを完了扱いに
-            task.actual = actual;
-            task.estimate = Math.min(task.estimate, actual);
-            task.done = true;
-            task.title += "（中断）";
-
-            // 次のタスクを探す（中断タスク以降で未完了・未開始）
-            const next = tasks.find((t, i) => i > taskIndex && !t.done && t.startTime === 0);
-
-            // 複製タスクを作成
-            const clone = {
-                ...task,
-                id: Date.now().toString(),
-                title: task.title.replace("（中断）", ""),
-                done: false,
-                startTime: 0,
-                actual: 0,
-                estimate: remaining,
-            };
-
-            // 挿入位置の order を決定
-            let insertOrder;
-            if (next) {
-                insertOrder = next.order + 0.5;
-            } else {
-                // 次のタスクがなければ末尾扱い（最大order + 1）
-                const maxOrder = Math.max(...tasks.map(t => t.order), 0);
-                insertOrder = maxOrder + 1;
+            const result = await apiCall({ action: 'interrupt', id, now_ms: Date.now() });
+            if (result?.ok) {
+                const otherDays = allTasks.filter(t => t.date !== task.date);
+                allTasks = [...otherDays, ...result.tasks];
+                syncLocal();
+                renderTasks();
+                requestAnimationFrame(() => refreshNowIndicator());
             }
-            clone.order = insertOrder;
-
-            tasks.push(clone);
-
-            // order に基づいて並べ替え & 再付番（整数化）
-            tasks.sort((a, b) => a.order - b.order);
-            tasks.forEach((t, i) => t.order = i);
-
-            saveTasks(currentDate, tasks);
-            renderTasks();
-            requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
-                refreshNowIndicator();
-            });
         }
 
         function finishTask(id) {
-            const tasks = getTasks(currentDate);
-            const task = tasks.find(t => t.id === id);
-            if (task && task.startTime) {
-                const rawMinutes = (Date.now() - task.startTime) / 60000;
-                const minutes = rawMinutes < 1 ? 1 : Math.floor(rawMinutes);
-                task.actual = minutes;
-                task.done = true;
-
-                const next = tasks.find(t => !t.done && t.id !== id && t.startTime === 0);
-
-                saveTasks(currentDate, tasks);
-                renderTasks();
-                requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
-                    refreshNowIndicator();
-                });
-            } else {
-                alert("開始していません");
-            }
+            const task = allTasks.find(t => t.id === id);
+            if (!task || !task.startTime) { alert("開始していません"); return; }
+            const rawMinutes = (Date.now() - task.startTime) / 60000;
+            task.actual = rawMinutes < 1 ? 1 : Math.floor(rawMinutes);
+            task.done = true;
+            syncLocal();
+            apiCall({ action: 'update', id, fields: { done: true, actual: task.actual } });
+            renderTasks();
+            requestAnimationFrame(() => refreshNowIndicator());
         }
 
         function editTask(id) {
@@ -954,7 +897,13 @@
                         task.done = true;  // 念のため維持
                     }
                 }
-                saveTasks(currentDate, tasks);
+                syncLocal();
+                apiCall({ action: 'update', id, fields: {
+                    title: task.title, memo: task.memo, url: task.url,
+                    date: task.date, estimate: task.estimate, color: task.color,
+                    startTime: task.startTime, actual: task.actual,
+                    done: task.done, order: task.order,
+                }});
             }
             editingId = null;
             renderTasks();
@@ -1104,17 +1053,21 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             (async () => {
-                const urlParams = new URLSearchParams(location.search);
-
-                // myID 読み取り・プロンプト入力
-                myID = urlParams.get("id");
-                while (!myID || !/^[a-zA-Z0-9]+$/.test(myID)) {
-                    myID = prompt("IDを入力してください（半角英数字）");
+                // 認証チェック
+                try {
+                    const authRes = await fetch('auth.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'check' })
+                    });
+                    const authData = await authRes.json();
+                    if (!authData.ok) { location.href = 'login.html'; return; }
+                } catch (e) {
+                    location.href = 'login.html'; return;
                 }
-                urlParams.set("id", myID);
-                history.replaceState(null, "", "?" + urlParams.toString());
 
                 // 開始時刻復元
+                const urlParams = new URLSearchParams(location.search);
                 const paramStart = urlParams.get("start");
                 if (paramStart && /^\d{2}:\d{2}$/.test(paramStart)) {
                     startInput.value = paramStart;
@@ -1136,25 +1089,9 @@
                 await loadTasks();
 
                 const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-                let updated = false;
-
-                allTasks.forEach(task => {
-                    // 未開始・未完了・日付が過去のみを対象
-                    if (task.startTime === 0 && !task.done && task.date < todayStr) {
-                        task.date = todayStr;
-                        updated = true;
-                    }
-                });
-
-                if (updated) {
-                    localStorage.setItem("allTasks", JSON.stringify(allTasks));
-                    fetch('save.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: myID, tasks: allTasks })
-                    }).catch(e => {
-                        console.error("タスク保存エラー（過去タスク→今日）:", e);
-                    });
+                const migRes = await apiCall({ action: 'migrate_past', today: todayStr });
+                if (migRes?.updated > 0) {
+                    await loadTasks();
                 }
 
                 const titleEl = document.getElementById("calendarTitle");
@@ -1230,28 +1167,31 @@
 
                 new Sortable(tasksEl, {
                     animation: 150,
-                    handle: ".drag-handle",  // ← ハンドルのみでドラッグ可能
+                    handle: ".drag-handle",
                     onEnd: () => {
                         const ids = [...tasksEl.children].map(div => div.dataset.id);
-                        const tasks = getTasks(currentDate);
                         ids.forEach((id, index) => {
-                            const task = tasks.find(t => t.id === id);
+                            const task = allTasks.find(t => t.id === id);
                             if (task) task.order = index;
                         });
-                        saveTasks(currentDate, tasks);
+                        syncLocal();
+                        apiCall({ action: 'reorder', date: currentDate, order: ids });
                         updateCalendar();
                         renderTasks();
                     }
                 });
 
                 document.getElementById("dashboardBtn").addEventListener("click", () => {
-                    const urlParams = new URLSearchParams(location.search);
-                    const id = urlParams.get("id");
-                    if (id && /^[a-zA-Z0-9]+$/.test(id)) {
-                        location.href = `dashboard.html?id=${encodeURIComponent(id)}`;
-                    } else {
-                        alert("IDが無効です。");
-                    }
+                    location.href = 'dashboard.html';
+                });
+
+                document.getElementById("logoutBtn").addEventListener("click", async () => {
+                    await fetch('auth.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'logout' })
+                    });
+                    location.href = 'login.html';
                 });
 
                 const addBtn = document.getElementById("floatingAddBtn");
@@ -1271,8 +1211,9 @@
                         order: tasks.length,
                         startTime: 0
                     };
-                    tasks.push(newTask);
-                    saveTasks(currentDate, tasks);
+                    allTasks.push(newTask);
+                    syncLocal();
+                    apiCall({ action: 'add', task: newTask });
                     editingId = newTask.id;
                     renderTasks();
                     setTimeout(() => document.getElementById("editTitle")?.focus(), 50);
