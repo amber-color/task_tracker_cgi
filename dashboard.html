@@ -116,6 +116,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'logout' })
                 });
+                localStorage.clear();
                 location.href = 'login.html';
             });
 

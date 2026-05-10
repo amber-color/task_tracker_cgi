@@ -145,6 +145,22 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
+        // 保存済み認証情報で自動ログイン
+        const saved = JSON.parse(localStorage.getItem('credentials') ?? 'null');
+        if (saved?.username && saved?.password) {
+            try {
+                const r = await fetch('auth.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'login', username: saved.username, password: saved.password })
+                });
+                const d = await r.json();
+                if (d.ok) { location.href = 'index.html'; return; }
+            } catch (_) {}
+            localStorage.removeItem('credentials');
+        }
+
+        // セッション継続チェック
         const res = await fetch('auth.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -180,6 +196,7 @@
         });
         const data = await res.json();
         if (data.ok) {
+            localStorage.setItem('credentials', JSON.stringify({ username, password }));
             location.href = 'index.html';
         } else {
             showError(data.error || 'ログインに失敗しました');

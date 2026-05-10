@@ -428,55 +428,8 @@
             color: red;
         }
 
-        #miniCalendar {
-            margin-top: auto;
-            /* ← これで一番下へ押し下げる */
-            width: 100%;
-            /* 任意：横幅をサイドバーいっぱいに */
-            /* align-self: stretch; でもOK（width:100%の代替） */
-        }
-
-        /* FullCalendar ヘッダーボタンのスタイル調整 */
-        #miniCalendar .fc-button {
-            background-color: #e0e0e5 !important;
-            border: none !important;
-            color: #333 !important;
-            font-size: 14px;
-            padding: 4px 8px;
-            box-shadow: none !important;
-        }
-
-        /* ホバー時に少し濃く */
-        #miniCalendar .fc-button:hover {
-            background-color: #d5d5da !important;
-        }
-
-        #miniCalendar .fc-toolbar-title {
-            font-weight: normal !important;
-            /* 太字を解除 */
-            color: #666 !important;
-            font-size: 20px;
-        }
-
         #calendarTitle {
             font-size: 20px;
-        }
-
-        /* 選択中の日付（クリックされた日） */
-        #miniCalendar .selected-date {
-            background-color: #e9f7ff;
-            box-sizing: border-box;
-        }
-
-        .fc .fc-toolbar.fc-header-toolbar {
-            padding: 0 10px;
-            height: 69px !important;
-            margin-bottom: 0 !important;
-        }
-
-        #miniCalendar .fc-view-harness {
-            margin: 10px !important;
-            background-color: white;
         }
 
         /* メモ内の長いURLを強制改行して崩れを防ぐ */
@@ -600,7 +553,6 @@
                 </div>
                 <button id="logoutBtn" title="ログアウト" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⏻</button>
             </div>
-            <div id="miniCalendar"></div>
         </div>
         <div id="todayArea">
             <div id="mobileBar"></div>
@@ -664,7 +616,6 @@
         const endTimeDisplay = document.getElementById("endTimeDisplay");
 
         let showTimer;
-        let selectedDate = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10); // "YYYY-MM-DD"
 
         function getTasks(date) {
             return allTasks.filter(t => t.date === date);
@@ -1231,24 +1182,8 @@
                 calendar.render();
                 requestAnimationFrame(() => calendar.updateSize());
 
-                document.getElementById("prevBtn").onclick = () => {
-                    calendar.prev();
-                    updateSelectedDateAfterNav();
-                };
-
-                document.getElementById("nextBtn").onclick = () => {
-                    calendar.next();
-                    updateSelectedDateAfterNav();
-                };
-
-                function updateSelectedDateAfterNav() {
-                    const newDate = calendar.getDate(); // 表示中の日時（Date型）
-                    selectedDate = new Date(newDate.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10); // YYYY-MM-DD形式に
-                    highlightMiniCalendarDate(); // ミニカレンダーの選択枠を更新
-
-                    // ミニカレンダー側も表示月を切り替え（選択日が見えるように）
-                    miniCalendar.gotoDate(selectedDate);
-                }
+                document.getElementById("prevBtn").onclick = () => { calendar.prev(); };
+                document.getElementById("nextBtn").onclick = () => { calendar.next(); };
 
                 new Sortable(tasksEl, {
                     animation: 150,
@@ -1276,6 +1211,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ action: 'logout' })
                     });
+                    localStorage.clear();
                     location.href = 'login.html';
                 });
 
@@ -1326,53 +1262,6 @@
                     }
                 });
 
-                function highlightMiniCalendarDate() {
-                    const todayStr = new Date().toISOString().slice(0, 10);
-
-                    document.querySelectorAll('#miniCalendar .fc-daygrid-day').forEach(cell => {
-                        const date = cell.getAttribute('data-date');
-                        cell.classList.remove('selected-date');
-                        cell.classList.remove('today-date');
-
-                        if (date === todayStr) {
-                            cell.classList.add('today-date');
-                        }
-                        if (date === selectedDate) {
-                            cell.classList.add('selected-date');
-                        }
-                    });
-                }
-
-                const miniCalendar = new FullCalendar.Calendar(document.getElementById("miniCalendar"), {
-                    initialView: 'dayGridMonth',
-                    height: 'auto',
-                    locale: 'ja',
-                    dayCellContent: function (arg) {
-                        // arg.date は Date オブジェクト、dayNumberText に「◯日」が入る
-                        // 「日」を取り除いて返す
-                        return arg.dayNumberText.replace('日', '');
-                    },
-                    headerToolbar: {
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: ''
-                    },
-                    dayHeaders: true,
-                    buttonText: {
-                        today: '今日'
-                    },
-                    dateClick(info) {
-                        selectedDate = info.dateStr;
-                        calendar.changeView('timeGridThreeDay', selectedDate);
-                        miniCalendar.refetchEvents();  // 選択強調を更新
-                        highlightMiniCalendarDate();   // 選択強調
-                    },
-                    datesSet() {
-                        highlightMiniCalendarDate();   // 月切替時も選択強調
-                    }
-                });
-                miniCalendar.render();
-
                 // ===== スマホ/PC 切替で要素を移設・ビュー変更 =====
                 const mql = window.matchMedia('(max-width: 800px)');
 
@@ -1400,12 +1289,10 @@
                 }
 
                 function applyResponsive() {
-                    // その時点の DOM を都度取り直す（null 防止）
                     const leftSidebar = document.getElementById('left-sidebar');
                     const mobileBar = ensureMobileBar();
                     const calCtrls = document.getElementById('calendarControls');
                     const timebarEl = document.getElementById('timebar');
-                    const miniCalEl = document.getElementById('miniCalendar');
 
                     if (mql.matches) {
                         // スマホ：mobileBar へ移設
@@ -1415,9 +1302,9 @@
                             calendar.changeView('timeGridDay');
                         }
                     } else {
-                        // PC：left-sidebar に戻す（controls → timebar → miniCalendar の順序）
+                        // PC：left-sidebar に戻す
                         move(calCtrls, leftSidebar, leftSidebar?.firstChild || null);
-                        move(timebarEl, leftSidebar, miniCalEl || null);
+                        move(timebarEl, leftSidebar);
                         if (calendar && calendar.view.type !== 'timeGridThreeDay') {
                             calendar.changeView('timeGridThreeDay');
                         }
