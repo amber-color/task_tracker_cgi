@@ -551,7 +551,7 @@
                     <label>開始<span class="omit-text">時刻:</span> <input type="time" id="startTime" value="09:00"></label>
                     <br><span>終了<span class="omit-text">予定:</span> <span id="endTimeDisplay">--:--</span></span>
                 </div>
-                <button id="logoutBtn" title="ログアウト" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⏻</button>
+                <button id="settingsBtn" title="設定" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⚙</button>
             </div>
         </div>
         <div id="todayArea">
@@ -595,6 +595,17 @@
                 <button id="modalCancelBtn">キャンセル</button>
                 <button id="modalSaveBtn">保存</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 設定モーダル -->
+    <div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:12px;padding:24px;width:360px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);display:flex;flex-direction:column;gap:12px;">
+            <h3 style="margin:0 0 4px;font-size:16px;color:#333;">設定</h3>
+            <!-- 設定項目（後から追加） -->
+            <div style="flex:1;"></div>
+            <hr style="border:none;border-top:1px solid #eee;margin:4px 0;">
+            <button id="settingsLogoutBtn" style="width:100%;padding:10px;background:#f44336;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">ログアウト</button>
         </div>
     </div>
 
@@ -1157,7 +1168,7 @@
                         currentDate = startStr; // 左のリストは先頭日を基準
                         const youbi = ["日", "月", "火", "水", "木", "金", "土"];
                         const s = new Date(startStr);
-                        titleEl.textContent = `${s.toLocaleDateString()}(${youbi[s.getDay()]})`;
+                        titleEl.textContent = `${s.getMonth() + 1}/${s.getDate()}(${youbi[s.getDay()]})`;
                         renderTasks();
                     },
                     eventDidMount(info) {
@@ -1205,7 +1216,14 @@
                     location.href = 'dashboard.html';
                 });
 
-                document.getElementById("logoutBtn").addEventListener("click", async () => {
+                const settingsModal = document.getElementById("settingsModal");
+                document.getElementById("settingsBtn").addEventListener("click", () => {
+                    settingsModal.style.display = "flex";
+                });
+                settingsModal.addEventListener("click", e => {
+                    if (e.target === settingsModal) settingsModal.style.display = "none";
+                });
+                document.getElementById("settingsLogoutBtn").addEventListener("click", async () => {
                     await fetch('auth.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
