@@ -1061,6 +1061,11 @@
                 cursor = new Date(cursor.getTime() + remaining * 60000);
             }
 
+            // estimate=0 などで segments が空になった場合のガード
+            if (segments.length === 0) {
+                segments.push({ start: new Date(cursor), end: new Date(cursor) });
+            }
+
             return { segments, finalEnd: cursor };
         }
 
@@ -1073,9 +1078,9 @@
             const now = new Date();
             const result = [];
 
-            // 固定時刻の障害物（未開始の scheduledTime タスク）を収集
+            // 固定時刻の障害物（未開始・未完了の scheduledTime タスク）を収集
             const obstacles = tasks
-                .filter(t => t.startTime === 0 && t.scheduledTime)
+                .filter(t => !t.done && t.startTime === 0 && t.scheduledTime)
                 .map(t => {
                     const s = new Date(`${date}T${t.scheduledTime}`);
                     return { start: s, end: new Date(s.getTime() + t.estimate * 60000) };
@@ -1083,8 +1088,8 @@
                 .sort((a, b) => a.start - b.start);
 
             // ① 完了済みタスク → 実時刻で配置、分断なし（重なり許容）
-            tasks.filter(t => t.done && t.startTime > 0).forEach(t => {
-                const start = new Date(t.startTime);
+            tasks.filter(t => t.done).forEach(t => {
+                const start = t.startTime > 0 ? new Date(t.startTime) : new Date(`${date}T${startTime}`);
                 const end = new Date(start.getTime() + (t.actual > 0 ? t.actual : t.estimate) * 60000);
                 const segments = [{ start, end }];
                 result.push({ ...t, plannedStart: start, plannedEnd: end, segments });
@@ -1092,14 +1097,14 @@
             });
 
             // ② 開始済み・未完了タスク → 固定タスクで分断
-            tasks.filter(t => t.startTime > 0 && !t.done).forEach(t => {
+            tasks.filter(t => !t.done && t.startTime > 0).forEach(t => {
                 const { segments, finalEnd } = placeWithSegments(new Date(t.startTime), t.estimate, obstacles);
                 result.push({ ...t, plannedStart: segments[0].start, plannedEnd: finalEnd, segments });
                 if (finalEnd > latestEnd) latestEnd = finalEnd;
             });
 
-            // ③ 固定時刻タスク（未開始）→ scheduledTime に配置、分断なし
-            tasks.filter(t => t.startTime === 0 && t.scheduledTime)
+            // ③ 固定時刻タスク（未開始・未完了）→ scheduledTime に配置、分断なし
+            tasks.filter(t => !t.done && t.startTime === 0 && t.scheduledTime)
                 .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
                 .forEach(t => {
                     const start = new Date(`${date}T${t.scheduledTime}`);
@@ -1111,14 +1116,17 @@
             // now ジャンプ（固定タスクの end は latestEnd に含めない）
             let current = (useNow && date === today && now > latestEnd) ? now : latestEnd;
 
-            // ④ 自由タスク（未開始・scheduledTime なし）→ 固定タスクで分断しながら積み上げ
-            tasks.filter(t => t.startTime === 0 && !t.scheduledTime)
+            // ④ 自由タスク（未開始・未完了・scheduledTime なし）→ 固定タスクで分断しながら積み上げ
+            tasks.filter(t => !t.done && t.startTime === 0 && !t.scheduledTime)
                 .sort((a, b) => a.order - b.order)
                 .forEach(t => {
                     const { segments, finalEnd } = placeWithSegments(current, t.estimate, obstacles);
                     result.push({ ...t, plannedStart: segments[0].start, plannedEnd: finalEnd, segments });
                     current = finalEnd;
                 });
+
+            // タスクリストの表示順を手動 order に合わせる
+            result.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
             return { tasks: result, latestEnd: current };
         }
