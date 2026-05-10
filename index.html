@@ -548,7 +548,7 @@
             <div id="timebar">
                 <button id="dashboardBtn">📊</button>
                 <div>
-                    <label>開始<span class="omit-text">時刻:</span> <input type="time" id="startTime" value="09:00"></label>
+                    <span>開始<span class="omit-text">時刻:</span> <span id="startTimeDisplay">09:00</span></span>
                     <br><span>終了<span class="omit-text">予定:</span> <span id="endTimeDisplay">--:--</span></span>
                 </div>
                 <button id="settingsBtn" title="設定" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⚙</button>
@@ -623,8 +623,9 @@
         let editingId = null;
 
         const tasksEl = document.getElementById("tasks");
-        const startInput = document.getElementById("startTime");
+        let startTime = localStorage.getItem('startTime') || '09:00';
         const endTimeDisplay = document.getElementById("endTimeDisplay");
+        document.getElementById("startTimeDisplay").textContent = startTime;
 
         let showTimer;
 
@@ -757,7 +758,7 @@
 
         function computePlannedTimes() {
             const tasks = getTasks(currentDate).sort((a, b) => a.order - b.order);
-            const base = new Date(`${currentDate}T${startInput.value}`);
+            const base = new Date(`${currentDate}T${startTime}`);
             let currentTime = new Date(base);
 
             return tasks.map(t => {
@@ -1008,7 +1009,7 @@
 
         function updateEndTime() {
             const tasks = getTasks(currentDate).sort((a, b) => a.order - b.order);
-            let latestEnd = new Date(`${currentDate}T${startInput.value}`);
+            let latestEnd = new Date(`${currentDate}T${startTime}`);
             const now = Date.now();
 
             // 1) 完了済みタスクで最新終了時刻を進める
@@ -1052,7 +1053,7 @@
         function buildTimeline(date, { useNow = true } = {}) {
             const tasks = getTasks(date).slice().sort((a, b) => a.order - b.order);
 
-            const startBase = new Date(`${date}T${startInput.value}`);
+            const startBase = new Date(`${date}T${startTime}`);
             let current = startBase;
             let latestEnd = startBase;
 
@@ -1113,26 +1114,6 @@
                     location.href = 'login.html'; return;
                 }
 
-                // 開始時刻復元
-                const urlParams = new URLSearchParams(location.search);
-                const paramStart = urlParams.get("start");
-                if (paramStart && /^\d{2}:\d{2}$/.test(paramStart)) {
-                    startInput.value = paramStart;
-                }
-
-                startInput.addEventListener("change", () => {
-                    calendar.setOption("slotMinTime", startInput.value + ":00");
-
-                    // startInput.value（例: "09:00"）をDateに変換
-                    const currentDate = new Date().toISOString().slice(0, 10); // 例: "2025-05-25"
-                    const startTime = new Date(`${currentDate}T${startInput.value}`);
-                    updateCalendar();
-                    updateEndTime();
-                    const params = new URLSearchParams(location.search);
-                    params.set("start", startInput.value);
-                    history.replaceState(null, "", "?" + params.toString());
-                });
-
                 await loadTasks();
 
                 const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -1145,7 +1126,7 @@
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
                     initialView: 'timeGridThreeDay',
                     height: '100%',
-                    slotMinTime: startInput.value + ":00",
+                    slotMinTime: startTime + ":00",
                     slotMaxTime: "33:00:00",
                     nowIndicator: true,
                     allDaySlot: false,
@@ -1216,21 +1197,8 @@
                     location.href = 'dashboard.html';
                 });
 
-                const settingsModal = document.getElementById("settingsModal");
                 document.getElementById("settingsBtn").addEventListener("click", () => {
-                    settingsModal.style.display = "flex";
-                });
-                settingsModal.addEventListener("click", e => {
-                    if (e.target === settingsModal) settingsModal.style.display = "none";
-                });
-                document.getElementById("settingsLogoutBtn").addEventListener("click", async () => {
-                    await fetch('auth.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'logout' })
-                    });
-                    localStorage.clear();
-                    location.href = 'login.html';
+                    location.href = 'setting.html';
                 });
 
                 document.getElementById("modalCancelBtn").addEventListener("click", cancelEdit);
