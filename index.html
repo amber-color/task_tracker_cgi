@@ -41,12 +41,11 @@
 
         #timebar {
             color: #333;
-            padding: 10px 16px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            /* 中身を中央揃え */
-            gap: 12px;
+            justify-content: space-between;
+            gap: 8px;
             width: 100%;
         }
 
@@ -89,12 +88,10 @@
         }
 
         #tasklist {
-            width: 30%;
-            max-width: 30%;
+            flex: 0 0 300px;
             display: flex;
             flex-direction: column;
             border-right: 1px solid #ccc;
-            /*border-radius: 12px 0 0 0;*/
             height: 100%;
             background: white;
         }
@@ -151,11 +148,11 @@
             }
 
             #tasklist {
-                min-width: 60%;
+                flex: 0 0 55%;
             }
 
             #calendar {
-                width: 40% !important;
+                flex: 1 !important;
             }
 
             .omit-text {
@@ -233,7 +230,7 @@
         }
 
         #calendar {
-            width: 70%;
+            flex: 1;
             overflow-y: auto;
         }
 
@@ -409,22 +406,16 @@
         }
 
         #left-sidebar {
-            max-width: 20%;
-            min-width: 200px;
+            flex: 0 0 180px;
             padding: 0;
             overflow-y: auto;
             display: flex;
-            /* 縦並び */
             flex-direction: column;
             align-items: center;
             background: #fff;
-            /* 影を綺麗に見せるための背景 */
             position: relative;
-            /* z-index を効かせるため */
             z-index: 1;
-            /* 右側要素より上に */
             box-shadow: 8px 0 18px -10px rgba(0, 0, 0, 0.2);
-            /* 右方向だけに影 */
         }
 
         /* 土曜を青に */
@@ -513,6 +504,83 @@
         .task .title-link:visited {
             color: #551a8b;
         }
+
+        /* ===== 編集モーダル ===== */
+        #editModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        #editModal.open {
+            display: flex;
+        }
+        #editModalBox {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            width: 420px;
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #editModalBox h3 {
+            margin: 0 0 4px;
+            font-size: 16px;
+            color: #333;
+        }
+        #editModalBox input[type="text"],
+        #editModalBox input[type="number"],
+        #editModalBox input[type="url"],
+        #editModalBox input[type="date"],
+        #editModalBox input[type="time"],
+        #editModalBox textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        #editModalBox textarea {
+            resize: vertical;
+            min-height: 72px;
+        }
+        .modal-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .modal-row label {
+            font-size: 13px;
+            color: #555;
+            white-space: nowrap;
+        }
+        .modal-row input { flex: 1; }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .modal-footer button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        #modalCancelBtn { background: #e0e0e5; color: #333; }
+        #modalSaveBtn   { background: #333; color: #fff; }
+        #modalSaveBtn:hover { background: #555; }
     </style>
 </head>
 
@@ -553,13 +621,39 @@
         </div>
     </div>
 
+    <!-- 編集モーダル -->
+    <div id="editModal">
+        <div id="editModalBox">
+            <h3>タスク編集</h3>
+            <div id="modalTimeRow" class="modal-row" style="display:none;">
+                <label>開始</label><input type="time" id="modalStartTime">
+                <label>終了</label><input type="time" id="modalEndTime">
+            </div>
+            <div class="modal-row">
+                <label>日付</label><input type="date" id="modalDate">
+            </div>
+            <div class="modal-row">
+                <input type="text" id="modalTitle" placeholder="タイトル" style="flex:1;">
+                <label>見積</label><input type="number" id="modalEstimate" style="width:70px;">
+            </div>
+            <input type="url" id="modalUrl" placeholder="URL">
+            <div class="color-palette" id="modalColorPalette"></div>
+            <textarea id="modalMemo" placeholder="メモ"></textarea>
+            <div class="modal-footer">
+                <button id="modalCancelBtn">キャンセル</button>
+                <button id="modalSaveBtn">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
     <script>
         let allTasks = [];
         const colorList = [
-            "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9", "#C5CAE9", "#BBDEFB",
-            "#B2EBF2", "#B2DFDB", "#C8E6C9", "#DCEDC8", "#FFF9C4", "#FFECB3"
+            "#EF9A9A", "#F48FB1", "#CE93D8", "#B39DDB",
+            "#9FA8DA", "#90CAF9", "#80DEEA", "#80CBC4",
+            "#A5D6A7", "#C5E1A5", "#FFF176", "#FFE082"
         ];
         let currentDate;
         let calendar;
@@ -638,80 +732,30 @@
                 div.className = classes;
                 div.style.background = task.color;
 
-                if (editingId === task.id) {
-                    // 完了済みタスクの開始・終了の初期値（存在しない/未完了なら空）
-                    const hasTimes = !!(task.done && task.startTime > 0);
-                    const startForUI = (() => {
-                        if (!hasTimes) return "";
-                        const d = new Date(task.startTime);
-                        return d.toTimeString().slice(0, 5); // "HH:MM"
-                    })();
-                    const endForUI = (() => {
-                        if (!hasTimes) return "";
-                        const end = new Date(task.startTime + (task.actual > 0 ? task.actual : task.estimate) * 60000);
-                        return end.toTimeString().slice(0, 5);
-                    })();
+                const actionButtons = (() => {
+                    if (task.done) {
+                        return `
+              <button onclick="editTask('${task.id}')">↺</button>
+              <button onclick="deleteTask('${task.id}')">✕</button>`;
+                    } else if (task.startTime > 0) {
+                        return `
+              <button onclick="interruptTask('${task.id}')" style="background:#d8f6ff;">❘❘</button>
+              <button onclick="finishTask('${task.id}')" style="background:#d8f6ff;">✓</button>`;
+                    } else {
+                        return `
+              <button onclick="startTask('${task.id}')">▷</button>
+              <button onclick="editTask('${task.id}')">↺</button>
+              <button onclick="deleteTask('${task.id}')">✕</button>`;
+                    }
+                })();
 
-                    div.innerHTML = `
-            <div class="row" style="gap:6px;margin-bottom:6px;">
-                <label style="font-size:16px;">
-                    <input type="date" id="editDate" value="${task.date}" style="height:30px;"
-                    ${(task.startTime > 0 && !task.done) ? "disabled" : ""}>
-                </label>
-              ${task.done ? `
-                <label style="font-size:16px;">開始
-                  <input type="time" id="editStartTime" value="${startForUI}" style="height:30px;">
-                </label>
-                <label style="font-size:16px;">終了
-                  <input type="time" id="editEndTime" value="${endForUI}" style="height:30px;">
-                </label>
-              ` : ``}
-            </div>
-            <input type="text" id="editTitle" style="width:80%;" value="${task.title}">            
-            <input type="number" id="editEstimate" style="width:calc(20% - 5px);"value="${task.estimate}">
-            <input type="url" id="editUrl" placeholder="URL" style="width:100%;margin-top:6px;" value="${task.url ? decodeURIComponent(task.url) : ""}">
-
-            <div class="color-palette" id="colorPalette">
-                ${colorList.map(color => `
-                <div class="color-swatch${color === task.color ? ' selected' : ''}" 
-                style="background:${color}" 
-                data-color="${color}">
-                </div>`).join('')}
-            </div>
-            <textarea style="width:100%;resize:none;" id="editMemo" placeholder="メモ" >${task.memo || ""}</textarea><div class="task-actions">
-              <button onclick="saveEdit('${task.id}')">✓</button>
-              <button onclick="cancelEdit()">✕</button>
-            </div>
-          `;
-
-                    const swatches = div.querySelectorAll(".color-swatch");
-                    swatches.forEach(swatch => {
-                        swatch.addEventListener("click", () => {
-                            swatches.forEach(s => s.classList.remove("selected"));
-                            swatch.classList.add("selected");
-                        });
-                    });
-
-                    const estimateInput = div.querySelector("#editEstimate");
-                    estimateInput.addEventListener("keydown", e => {
-                        if (e.key === "Enter") {
-                            if (!estimateInput.value.trim() || estimateInput.value.trim() == 0) {
-                                estimateInput.value = "15";  // 空欄ならデフォルトで15
-                            }
-                            saveEdit(task.id);
-                        }
-                    });
-
-                    setTimeout(() => document.getElementById("editTitle")?.focus(), 50);
-
-                } else {
-                    div.innerHTML = `
+                div.innerHTML = `
             <div>
              <strong>${task.url
-                            ? `<a class="title-link" href="${decodeURIComponent(task.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(task.title)}</a>`
-                            : escapeHTML(task.title)
-                        }</strong>
-              <span style="float:right;font-size: 0.85em; color: #666;">                ${formatTime(task.plannedStart)}-${formatTime(task.plannedEnd)}
+                        ? `<a class="title-link" href="${decodeURIComponent(task.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(task.title)}</a>`
+                        : escapeHTML(task.title)
+                    }</strong>
+              <span style="float:right;font-size: 0.85em; color: #666;">${formatTime(task.plannedStart)}-${formatTime(task.plannedEnd)}
               </span><br>
               見${task.estimate}分/実${task.done ? task.actual : "?"}分
               ${task.done ? `<span style="color: ${getDiffColor(task)};">(${formatDiff(task)})</span>` : ''}
@@ -719,15 +763,9 @@
             </div>
             <div>
               <div class="memo">${task.memo ? escapeHTML(task.memo) : ""}</div>
-            <div class="task-actions">
-              <button onclick="startTask('${task.id}')" ${task.startTime > 0 ? 'disabled style="opacity:0.5; cursor: not-allowed;"' : ''}>▷</button>
-              <button onclick="interruptTask('${task.id}')" ${(task.done || task.startTime <= 0) ? 'disabled style="opacity:0.5; cursor: not-allowed;"' : 'style="background:#d8f6ff;"'}>❘❘</button>
-              <button onclick="finishTask('${task.id}')" ${(task.done || task.startTime <= 0) ? 'disabled style="opacity:0.5; cursor: not-allowed;"' : 'style="background:#d8f6ff;"'}>✓</button>
-              <button onclick="editTask('${task.id}')">↺</button>
-              <button onclick="deleteTask('${task.id}')">✕</button>
+            <div class="task-actions">${actionButtons}
             </div>
           `;
-                }
                 div.dataset.id = task.id;
                 tasksEl.appendChild(div);
             });
@@ -825,16 +863,51 @@
         }
 
         function editTask(id) {
+            const task = allTasks.find(t => t.id === id);
+            if (!task) return;
             editingId = id;
-            renderTasks();
-            requestAnimationFrame(() => {  // ← レイアウト確定後に nowIndicator を再生成
-                refreshNowIndicator();
+
+            // モーダルに値をセット
+            document.getElementById("modalDate").value = task.date;
+            document.getElementById("modalTitle").value = task.title;
+            document.getElementById("modalEstimate").value = task.estimate;
+            document.getElementById("modalUrl").value = task.url ? decodeURIComponent(task.url) : "";
+            document.getElementById("modalMemo").value = task.memo || "";
+
+            // 完了タスクのみ開始・終了時刻を表示
+            const timeRow = document.getElementById("modalTimeRow");
+            if (task.done && task.startTime > 0) {
+                timeRow.style.display = "flex";
+                const startD = new Date(task.startTime);
+                document.getElementById("modalStartTime").value = startD.toTimeString().slice(0, 5);
+                const endD = new Date(task.startTime + (task.actual || task.estimate) * 60000);
+                document.getElementById("modalEndTime").value = endD.toTimeString().slice(0, 5);
+            } else {
+                timeRow.style.display = "none";
+            }
+
+            // 日付入力: 進行中は変更不可
+            document.getElementById("modalDate").disabled = (task.startTime > 0 && !task.done);
+
+            // カラーパレット
+            const palette = document.getElementById("modalColorPalette");
+            palette.innerHTML = colorList.map(c =>
+                `<div class="color-swatch${c === task.color ? ' selected' : ''}" style="background:${c}" data-color="${c}"></div>`
+            ).join('');
+            palette.querySelectorAll(".color-swatch").forEach(s => {
+                s.addEventListener("click", () => {
+                    palette.querySelectorAll(".color-swatch").forEach(x => x.classList.remove("selected"));
+                    s.classList.add("selected");
+                });
             });
+
+            document.getElementById("editModal").classList.add("open");
+            setTimeout(() => document.getElementById("modalTitle")?.focus(), 50);
         }
 
         function cancelEdit() {
             editingId = null;
-            renderTasks();
+            document.getElementById("editModal").classList.remove("open");
         }
 
         function normalizeUrl(u) {
@@ -846,66 +919,58 @@
         }
 
         function saveEdit(id) {
-            const tasks = getTasks(currentDate);
-            const task = tasks.find(t => t.id === id);
-            const urlEl = document.getElementById("editUrl");
-            if (task) {
-                task.title = document.getElementById("editTitle").value.trim();
-                task.memo = document.getElementById("editMemo").value.trim();
-                if (urlEl) {
-                    // normalizeしてからエンコードして保存
-                    const norm = normalizeUrl(urlEl.value);
-                    task.url = norm ? encodeURIComponent(norm) : "";
-                }
-                // --- 日付（必ず編集可能） ---
-                const dateInputEl = document.getElementById("editDate");
-                if (dateInputEl && /^\d{4}-\d{2}-\d{2}$/.test(dateInputEl.value)) {
-                    task.date = dateInputEl.value; // ここで別日へ「移動」させる
-                    // saveEdit 内、task.date を更新した直後などに
-                    const moved = (task.date !== currentDate);
-                    if (moved) {
-                        const dest = getTasks(task.date);           // 移動先日の配列
-                        const maxOrder = dest.length ? Math.max(...dest.map(t => t.order)) : -1;
-                        task.order = maxOrder + 1;
-                    }
-                }
-                // 半角変換をここで適用
-                const rawEstimate = document.getElementById("editEstimate").value.trim();
-                const halfWidthEstimate = rawEstimate.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            const task = allTasks.find(t => t.id === id);
+            if (!task) { cancelEdit(); return; }
 
-                let est = parseInt(halfWidthEstimate, 10);
-                if (isNaN(est) || est <= 0) est = 15;
-                task.estimate = est;
-                const selectedColor = document.querySelector(".color-swatch.selected");
-                if (selectedColor) task.color = selectedColor.dataset.color;
+            task.title = document.getElementById("modalTitle").value.trim();
+            task.memo  = document.getElementById("modalMemo").value.trim();
+            const rawUrl = document.getElementById("modalUrl").value;
+            const norm = normalizeUrl(rawUrl);
+            task.url = norm ? encodeURIComponent(norm) : "";
 
-                // --- 完了済みタスクのみ：開始・終了の手編集を反映 ---
-                if (task.done) {
-                    const stEl = document.getElementById("editStartTime");
-                    const enEl = document.getElementById("editEndTime");
-                    const hasBoth = stEl && enEl && /^\d{2}:\d{2}$/.test(stEl.value) && /^\d{2}:\d{2}$/.test(enEl.value);
-                    if (hasBoth) {
-                        // 入力された日付（editDate）基準でタイムスタンプ計算
-                        const baseDate = dateInputEl && /^\d{4}-\d{2}-\d{2}$/.test(dateInputEl.value) ? dateInputEl.value : task.date;
-                        const startMs = new Date(`${baseDate}T${stEl.value}`).getTime();
-                        let endMs = new Date(`${baseDate}T${enEl.value}`).getTime();
-                        // 終了が開始以前なら「翌日」とみなす（深夜跨ぎ対応）
-                        if (endMs <= startMs) endMs += 24 * 60 * 60 * 1000;
-                        const minutes = Math.max(1, Math.round((endMs - startMs) / 60000));
-                        task.startTime = startMs;
-                        task.actual = minutes;
-                        task.done = true;  // 念のため維持
-                    }
-                }
-                syncLocal();
-                apiCall({ action: 'update', id, fields: {
-                    title: task.title, memo: task.memo, url: task.url,
-                    date: task.date, estimate: task.estimate, color: task.color,
-                    startTime: task.startTime, actual: task.actual,
-                    done: task.done, order: task.order,
-                }});
+            // 日付
+            const newDate = document.getElementById("modalDate").value;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(newDate) && newDate !== task.date) {
+                const dest = getTasks(newDate);
+                const maxOrder = dest.length ? Math.max(...dest.map(t => t.order)) : -1;
+                task.order = maxOrder + 1;
+                task.date = newDate;
             }
+
+            // 見積（全角対応）
+            const rawEst = document.getElementById("modalEstimate").value.trim()
+                .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            const est = parseInt(rawEst, 10);
+            task.estimate = (isNaN(est) || est <= 0) ? 15 : est;
+
+            // 色
+            const sel = document.querySelector("#modalColorPalette .color-swatch.selected");
+            if (sel) task.color = sel.dataset.color;
+
+            // 完了タスクの開始・終了手編集
+            if (task.done) {
+                const stVal = document.getElementById("modalStartTime").value;
+                const enVal = document.getElementById("modalEndTime").value;
+                if (/^\d{2}:\d{2}$/.test(stVal) && /^\d{2}:\d{2}$/.test(enVal)) {
+                    const base = task.date;
+                    const startMs = new Date(`${base}T${stVal}`).getTime();
+                    let endMs   = new Date(`${base}T${enVal}`).getTime();
+                    if (endMs <= startMs) endMs += 24 * 60 * 60 * 1000;
+                    task.startTime = startMs;
+                    task.actual = Math.max(1, Math.round((endMs - startMs) / 60000));
+                }
+            }
+
+            syncLocal();
+            apiCall({ action: 'update', id, fields: {
+                title: task.title, memo: task.memo, url: task.url,
+                date: task.date, estimate: task.estimate, color: task.color,
+                startTime: task.startTime, actual: task.actual,
+                done: task.done, order: task.order,
+            }});
+
             editingId = null;
+            document.getElementById("editModal").classList.remove("open");
             renderTasks();
         }
 
@@ -942,18 +1007,18 @@
         // 元の色に対応する淡い色マッピング
         function getPaleColor(hex) {
             const paleMap = {
-                "#FFCDD2": "#FCE4EC",
-                "#F8BBD0": "#F3E5F5",
-                "#E1BEE7": "#EDE7F6",
-                "#D1C4E9": "#E8EAF6",
-                "#C5CAE9": "#E3F2FD",
-                "#BBDEFB": "#E1F5FE",
-                "#B2EBF2": "#E0F7FA",
-                "#B2DFDB": "#E0F2F1",
-                "#C8E6C9": "#F1F8E9",
-                "#DCEDC8": "#F9FBE7",
-                "#FFF9C4": "#FFFDE7",
-                "#FFECB3": "#FFF8E1"
+                "#EF9A9A": "#FFCDD2",
+                "#F48FB1": "#F8BBD0",
+                "#CE93D8": "#E1BEE7",
+                "#B39DDB": "#D1C4E9",
+                "#9FA8DA": "#C5CAE9",
+                "#90CAF9": "#BBDEFB",
+                "#80DEEA": "#B2EBF2",
+                "#80CBC4": "#B2DFDB",
+                "#A5D6A7": "#C8E6C9",
+                "#C5E1A5": "#DCEDC8",
+                "#FFF176": "#FFF9C4",
+                "#FFE082": "#FFECB3"
             };
             return paleMap[hex] || "#eeeeee";
         }
@@ -1194,6 +1259,12 @@
                     location.href = 'login.html';
                 });
 
+                document.getElementById("modalCancelBtn").addEventListener("click", cancelEdit);
+                document.getElementById("modalSaveBtn").addEventListener("click", () => saveEdit(editingId));
+                document.getElementById("editModal").addEventListener("click", e => {
+                    if (e.target === document.getElementById("editModal")) cancelEdit();
+                });
+
                 const addBtn = document.getElementById("floatingAddBtn");
 
                 function addNewTask() {
@@ -1214,9 +1285,8 @@
                     allTasks.push(newTask);
                     syncLocal();
                     apiCall({ action: 'add', task: newTask });
-                    editingId = newTask.id;
                     renderTasks();
-                    setTimeout(() => document.getElementById("editTitle")?.focus(), 50);
+                    editTask(newTask.id);
                 }
 
                 // クリックでも追加
