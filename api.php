@@ -511,6 +511,22 @@ if ($action === 'migrate_past') {
         echo json_encode(['ok' => false, 'error' => '日付形式が不正です']);
         exit;
     }
+
+    // 開始済み・未完了の過去タスクを 23:59 で強制終了
+    $tz = new DateTimeZone('Asia/Tokyo');
+    $overdueStmt = $pdo->prepare(
+        'SELECT id, date, start_time FROM tasks WHERE user_id=? AND date<? AND done=0 AND start_time>0'
+    );
+    $overdueStmt->execute([$userId, $today]);
+    $overdues = $overdueStmt->fetchAll();
+    $endStmt = $pdo->prepare('UPDATE tasks SET done=1, actual=? WHERE id=?');
+    foreach ($overdues as $task) {
+        $endOfDay = new DateTime($task['date'] . ' 23:59:00', $tz);
+        $endMs    = $endOfDay->getTimestamp() * 1000;
+        $actual   = max(1, (int)round(($endMs - (int)$task['start_time']) / 60000));
+        $endStmt->execute([$actual, $task['id']]);
+    }
+
     $stmt = $pdo->prepare(
         'UPDATE tasks SET date=?
          WHERE user_id=? AND date<? AND done=0 AND start_time=0
@@ -525,7 +541,7 @@ if ($action === 'migrate_past') {
          )'
     );
     $stmt->execute([$today, $userId, $today, $today]);
-    echo json_encode(['ok' => true, 'updated' => $stmt->rowCount()]);
+    echo json_encode(['ok' => true, 'updated' => $stmt->rowCount(), 'forcedEnded' => count($overdues)]);
     exit;
 }
 
