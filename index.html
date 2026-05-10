@@ -1118,7 +1118,7 @@
 
                 const todayStr = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
                 const migRes = await apiCall({ action: 'migrate_past', today: todayStr });
-                if (migRes?.updated > 0) {
+                if (migRes?.updated > 0 || migRes?.forcedEnded > 0) {
                     await loadTasks();
                 }
 
