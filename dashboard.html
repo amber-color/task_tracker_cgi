@@ -107,6 +107,11 @@
             loadData(id);
         });
 
+        function escapeHTML(s) {
+            return String(s).replace(/[&<>"']/g, c =>
+                ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+        }
+
         function loadData(id) {
             fetch('load.php', {
                 method: 'POST',
@@ -141,7 +146,7 @@
                 const startDate = t.startTime ? new Date(t.startTime).toLocaleString() : "";
                 tableRows.push([
                     startDate,
-                    t.title,
+                    escapeHTML(t.title),
                     t.estimate,
                     t.actual,
                     `<span style="color:${color}">${diff > 0 ? '+' : ''}${diff}</span>`
