@@ -56,12 +56,15 @@
 </head>
 
 <body>
-    <h1>📊 タスクダッシュボード</h1>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <h1 style="margin:0;">📊 タスクダッシュボード</h1>
+        <button id="logoutBtn" style="margin-left:auto;padding:6px 12px;background:#e0e0e5;border:none;border-radius:6px;cursor:pointer;">ログアウト</button>
+    </div>
 
     <div>
         <label>開始日: <input type="date" id="startDate"></label>
         <label>終了日: <input type="date" id="endDate"></label>
-        <button onclick="loadData(currentId)">更新</button>
+        <button onclick="loadData()">更新</button>
     </div>
 
     <h2>棒グラフ（日別 見積 vs 実績）</h2>
@@ -85,17 +88,20 @@
     </table>
 
     <script>
-        let barChart = null, lineChart = null, dataTable = null, currentId = null;
+        let barChart = null, lineChart = null, dataTable = null;
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const params = new URLSearchParams(location.search);
-            let id = params.get("id");
-            while (!id || !/^[a-zA-Z0-9]+$/.test(id)) {
-                id = prompt("ユーザーIDを入力してください（半角英数字）");
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const authRes = await fetch('auth.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'check' })
+                });
+                const authData = await authRes.json();
+                if (!authData.ok) { location.href = 'login.html'; return; }
+            } catch (e) {
+                location.href = 'login.html'; return;
             }
-            params.set("id", id);
-            history.replaceState(null, "", "?" + params.toString());
-            currentId = id;
 
             const today = new Date();
             const oneMonthAgo = new Date(today);
@@ -104,7 +110,16 @@
             document.getElementById("startDate").value = oneMonthAgo.toISOString().slice(0, 10);
             document.getElementById("endDate").value = today.toISOString().slice(0, 10);
 
-            loadData(id);
+            document.getElementById("logoutBtn").addEventListener("click", async () => {
+                await fetch('auth.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'logout' })
+                });
+                location.href = 'login.html';
+            });
+
+            loadData();
         });
 
         function escapeHTML(s) {
@@ -112,14 +127,17 @@
                 ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
         }
 
-        function loadData(id) {
-            fetch('load.php', {
+        function loadData() {
+            fetch('api.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `id=${encodeURIComponent(id)}`
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'load' })
             })
-                .then(res => res.json())
-                .then(tasks => renderDashboard(tasks))
+                .then(res => {
+                    if (res.status === 401) { location.href = 'login.html'; return null; }
+                    return res.json();
+                })
+                .then(tasks => tasks && renderDashboard(tasks))
                 .catch(err => alert("読み込み失敗: " + err));
         }
 
