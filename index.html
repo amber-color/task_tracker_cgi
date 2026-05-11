@@ -1223,6 +1223,7 @@
             });
 
             // ③ 固定時刻タスク（未開始・未完了）→ scheduledTime に配置、分断なし
+            let fixedLatestEnd = latestEnd;
             tasks.filter(t => !t.done && t.startTime === 0 && t.scheduledTime)
                 .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
                 .forEach(t => {
@@ -1230,9 +1231,10 @@
                     const end = new Date(start.getTime() + t.estimate * 60000);
                     const segments = [{ start, end }];
                     result.push({ ...t, plannedStart: start, plannedEnd: end, segments });
+                    if (end > fixedLatestEnd) fixedLatestEnd = end;
                 });
 
-            // now ジャンプ（固定タスクの end は latestEnd に含めない）
+            // now ジャンプ（current はフリータスクの配置起点なので固定タスクを含まない latestEnd ベース）
             let current = (useNow && date === today && now > latestEnd) ? now : latestEnd;
 
             // ④ 自由タスク（未開始・未完了・scheduledTime なし）→ 固定タスクで分断しながら積み上げ
@@ -1247,7 +1249,8 @@
             // タスクリストの表示順を手動 order に合わせる
             result.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-            return { tasks: result, latestEnd: current };
+            // 終了予定 = フリータスク終端 と 固定タスク終端 の遅い方
+            return { tasks: result, latestEnd: current > fixedLatestEnd ? current : fixedLatestEnd };
         }
 
         document.addEventListener("DOMContentLoaded", () => {
