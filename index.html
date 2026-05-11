@@ -655,6 +655,7 @@
         let currentDate;
         let calendar;
         let editingId = null;
+        let pendingNewTask = null;
 
         const tasksEl = document.getElementById("tasks");
         let startTime = localStorage.getItem('startTime') || '09:00';
@@ -1002,7 +1003,8 @@
         }
 
         function saveEdit(id) {
-            const task = allTasks.find(t => t.id === id);
+            const isNew = (id === '__new__');
+            const task = isNew ? { ...pendingNewTask } : allTasks.find(t => t.id === id);
             if (!task) { cancelEdit(); return; }
 
             task.title = document.getElementById("modalTitle").value.trim();
@@ -1013,11 +1015,13 @@
 
             // 日付
             const newDate = document.getElementById("modalDate").value;
-            if (/^\d{4}-\d{2}-\d{2}$/.test(newDate) && newDate !== task.date) {
-                const dest = getTasks(newDate);
-                const maxOrder = dest.length ? Math.max(...dest.map(t => t.order)) : -1;
-                task.order = maxOrder + 1;
-                task.date = newDate;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+                if (isNew || newDate !== task.date) {
+                    const dest = getTasks(newDate);
+                    const maxOrder = dest.length ? Math.max(...dest.map(t => t.order)) : -1;
+                    task.order = maxOrder + 1;
+                    task.date = newDate;
+                }
             }
 
             // 見積（全角対応）
@@ -1055,15 +1059,22 @@
                 }
             }
 
-            syncLocal();
-            apiCall({ action: 'update', id, fields: {
-                title: task.title, memo: task.memo, url: task.url,
-                date: task.date, estimate: task.estimate, color: task.color,
-                startTime: task.startTime, actual: task.actual,
-                done: task.done, order: task.order,
-                scheduledTime: task.scheduledTime ?? "",
-            }});
+            if (isNew) {
+                allTasks.push(task);
+                syncLocal();
+                apiCall({ action: 'add', task });
+            } else {
+                syncLocal();
+                apiCall({ action: 'update', id, fields: {
+                    title: task.title, memo: task.memo, url: task.url,
+                    date: task.date, estimate: task.estimate, color: task.color,
+                    startTime: task.startTime, actual: task.actual,
+                    done: task.done, order: task.order,
+                    scheduledTime: task.scheduledTime ?? "",
+                }});
+            }
 
+            pendingNewTask = null;
             editingId = null;
             document.getElementById("editModal").classList.remove("open");
             renderTasks();
@@ -1382,7 +1393,7 @@
 
                 function addNewTask() {
                     const tasks = getTasks(currentDate);
-                    const newTask = {
+                    pendingNewTask = {
                         id: Date.now().toString(),
                         date: currentDate,
                         title: "",
@@ -1390,17 +1401,44 @@
                         url: "",
                         done: false,
                         color: colorList[tasks.length % colorList.length],
-                        estimate: 0,
+                        estimate: 15,
                         actual: 0,
                         order: tasks.length,
                         startTime: 0,
                         scheduledTime: "",
                     };
-                    allTasks.push(newTask);
-                    syncLocal();
-                    apiCall({ action: 'add', task: newTask });
-                    renderTasks();
-                    editTask(newTask.id);
+                    editingId = '__new__';
+
+                    document.getElementById("modalDate").value = pendingNewTask.date;
+                    document.getElementById("modalDate").disabled = false;
+                    document.getElementById("modalTitle").value = "";
+                    document.getElementById("modalEstimate").value = 15;
+                    document.getElementById("modalUrl").value = "";
+                    document.getElementById("modalMemo").value = "";
+                    document.getElementById("modalTimeRow").style.display = "none";
+
+                    const fixedRow = document.getElementById("modalFixedRow");
+                    const fixedToggle = document.getElementById("modalFixedToggle");
+                    const scheduledInput = document.getElementById("modalScheduledTime");
+                    fixedRow.style.display = "flex";
+                    fixedToggle.classList.remove("active");
+                    fixedToggle.textContent = "開始時刻: 固定しない";
+                    scheduledInput.style.display = "none";
+                    scheduledInput.value = "";
+
+                    const palette = document.getElementById("modalColorPalette");
+                    palette.innerHTML = colorList.map(c =>
+                        `<div class="color-swatch${c === pendingNewTask.color ? ' selected' : ''}" style="background:${c}" data-color="${c}"></div>`
+                    ).join('');
+                    palette.querySelectorAll(".color-swatch").forEach(s => {
+                        s.addEventListener("click", () => {
+                            palette.querySelectorAll(".color-swatch").forEach(x => x.classList.remove("selected"));
+                            s.classList.add("selected");
+                        });
+                    });
+
+                    document.getElementById("editModal").classList.add("open");
+                    setTimeout(() => document.getElementById("modalTitle")?.focus(), 50);
                 }
 
                 // クリックでも追加
