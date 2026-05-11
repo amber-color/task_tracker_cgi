@@ -1134,45 +1134,9 @@
 
 
         function updateEndTime() {
-            const tasks = getTasks(currentDate).sort((a, b) => a.order - b.order);
-            let latestEnd = new Date(`${currentDate}T${startTime}`);
-            const now = Date.now();
-
-            // 1) 完了済みタスクで最新終了時刻を進める
-            tasks.forEach(t => {
-                if (t.done && t.startTime && t.actual) {
-                    const end = new Date(t.startTime + t.actual * 60000);
-                    if (end > latestEnd) latestEnd = end;
-                }
-            });
-
-            // ★ 追加：今日なら「今」より前に戻らない
-            if (currentDate === new Date().toISOString().slice(0, 10)) {
-                const nowDate = new Date(now);
-
-                if (latestEnd < nowDate) {
-                    latestEnd = nowDate;
-                }
-            }
-            // 2) 未完了タスクを積み上げ（開始済みは「残り時間」で積む）
-            tasks.forEach(t => {
-                if (!t.done) {
-
-
-
-                    let addMin = t.estimate;
-                    if (t.startTime > 0) {
-                        const elapsed = Math.max(0, Math.floor((now - t.startTime) / 60000));
-                        addMin = Math.max(0, t.estimate - elapsed); // 残り時間
-                        // タスク開始時刻が latestEnd より後ならジャンプ
-                        const startedAt = new Date(t.startTime);
-                        if (startedAt > latestEnd) latestEnd = startedAt;
-                    }
-                    latestEnd = new Date(latestEnd.getTime() + addMin * 60000);
-                }
-            });
-
-            endTimeDisplay.textContent = latestEnd.toTimeString().slice(0, 5);
+            const { latestEnd } = buildTimeline(currentDate);
+            const base = new Date(`${currentDate}T${startTime}`);
+            endTimeDisplay.textContent = latestEnd > base ? latestEnd.toTimeString().slice(0, 5) : '--:--';
         }
 
         // 固定タスクを障害物として自由タスクをセグメント分割して配置
