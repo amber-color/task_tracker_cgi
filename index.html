@@ -1213,7 +1213,7 @@
             const tasks = getTasks(date).slice().sort((a, b) => a.order - b.order);
             const startBase = new Date(`${date}T${startTime}`);
             let latestEnd = startBase;
-            const today = new Date().toISOString().slice(0, 10);
+            const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
             const now = new Date();
             const result = [];
 
