@@ -79,7 +79,7 @@
         #newtask button {
             background-color: #e0e0e5;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 4px 10px;
             font-size: 16px;
             color: #333;
@@ -169,8 +169,24 @@
         .task {
             padding: 8px;
             position: relative;
-            border-radius: 5px;
-            box-shadow: 4px 4px 9px -2px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+        }
+
+        .task strong {
+            font-weight: 600;
+            font-size: 0.92em;
+        }
+
+        .task-meta {
+            font-size: 0.78em;
+            color: #888;
+        }
+
+        .task-time {
+            float: right;
+            font-size: 0.78em;
+            color: #888;
         }
 
         .done {
@@ -258,13 +274,20 @@
         .task-actions button {
             flex: 1 1 25%;
             border: none;
-            border-right: 1px solid #ccc;
-            padding: 3px 0;
-            font-size: 0.9em;
-            color: #333;
+            border-right: 1px solid #eee;
+            padding: 5px 0;
+            color: #555;
             background: none;
             cursor: pointer;
             transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .task-actions svg {
+            width: 14px;
+            height: 14px;
         }
 
         /* 最後のボタンは右ボーダーなし */
@@ -286,7 +309,7 @@
         .color-swatch {
             width: 20px;
             height: 20px;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             border: 2px solid transparent;
         }
@@ -686,6 +709,14 @@
             return 'gray';
         }
 
+        const SVG = {
+            play:  `<svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M4 2.5l9 5.5-9 5.5z"/></svg>`,
+            edit:  `<svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M11.1 1.9a1.5 1.5 0 012.1 2.1L5 12.2H3v-2.1L11.1 1.9z"/></svg>`,
+            trash: `<svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 1.5h3l.5.5H13v1H3V2h3l.5-.5zM4 4.5h8l-.9 9.5H4.9L4 4.5zm2 1.5v6.5h1V6H6zm3 0v6.5h1V6H9z"/></svg>`,
+            pause: `<svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="2.5" width="3.5" height="11" rx="1"/><rect x="9" y="2.5" width="3.5" height="11" rx="1"/></svg>`,
+            check: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><polyline points="2,9 6,13 14,3"/></svg>`,
+        };
+
         function renderTasks() {
             //const tasks = getTasks(currentDate);
             const { tasks } = buildTimeline(currentDate);
@@ -702,17 +733,17 @@
                 const actionButtons = (() => {
                     if (task.done) {
                         return `
-              <button onclick="editTask('${task.id}')">↺</button>
-              <button onclick="deleteTask('${task.id}')">✕</button>`;
+              <button onclick="editTask('${task.id}')" title="編集">${SVG.edit}</button>
+              <button onclick="deleteTask('${task.id}')" title="削除">${SVG.trash}</button>`;
                     } else if (task.startTime > 0) {
                         return `
-              <button onclick="interruptTask('${task.id}')" style="background:#d8f6ff;">❘❘</button>
-              <button onclick="finishTask('${task.id}')" style="background:#d8f6ff;">✓</button>`;
+              <button onclick="interruptTask('${task.id}')" title="中断">${SVG.pause}</button>
+              <button onclick="finishTask('${task.id}')" title="完了">${SVG.check}</button>`;
                     } else {
                         return `
-              <button onclick="startTask('${task.id}')">▷</button>
-              <button onclick="editTask('${task.id}')">↺</button>
-              <button onclick="deleteTask('${task.id}')">✕</button>`;
+              <button onclick="startTask('${task.id}')" title="開始">${SVG.play}</button>
+              <button onclick="editTask('${task.id}')" title="編集">${SVG.edit}</button>
+              <button onclick="deleteTask('${task.id}')" title="削除">${SVG.trash}</button>`;
                     }
                 })();
 
@@ -722,10 +753,9 @@
                         ? `<a class="title-link" href="${decodeURIComponent(task.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(task.title)}</a>`
                         : escapeHTML(task.title)
                     }</strong>
-              <span style="float:right;font-size: 0.85em; color: #666;">${formatTime(task.plannedStart)}-${formatTime(task.plannedEnd)}
-              </span><br>
-              見${task.estimate}分/実${task.done ? task.actual : "?"}分
-              ${task.done ? `<span style="color: ${getDiffColor(task)};">(${formatDiff(task)})</span>` : ''}
+              <span class="task-time">${formatTime(task.plannedStart)}-${formatTime(task.plannedEnd)}</span><br>
+              <span class="task-meta">見${task.estimate}分/実${task.done ? task.actual : "?"}分</span>
+              ${task.done ? `<span class="task-meta" style="color: ${getDiffColor(task)};">(${formatDiff(task)})</span>` : ''}
               <span class="drag-handle" title="並べ替え">&#9776;</span>
             </div>
             <div>
