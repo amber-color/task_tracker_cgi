@@ -893,20 +893,29 @@
         function checkAutoScheduled() {
             const now = Date.now();
             const today = new Date(now + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-            const todayTasks = getTasks(today);
             let changed = false;
 
-            for (const task of todayTasks) {
+            for (const task of allTasks) {
                 if (!task.scheduledTime || task.done) continue;
-                const scheduledMs = new Date(`${today}T${task.scheduledTime}:00`).getTime();
+                const scheduledMs = new Date(`${task.date}T${task.scheduledTime}:00`).getTime();
                 const endMs = scheduledMs + task.estimate * 60000;
 
-                if (task.startTime === 0 && now >= scheduledMs) {
+                if (task.startTime === 0 && now >= endMs) {
+                    // 開始も終了も過ぎている → 一括でstart+done
+                    task.startTime = scheduledMs;
+                    task.actual = Math.max(1, task.estimate);
+                    task.done = true;
+                    syncLocal();
+                    apiCall({ action: 'update', id: task.id, fields: { startTime: task.startTime, done: true, actual: task.actual } });
+                    changed = true;
+                } else if (task.startTime === 0 && now >= scheduledMs) {
+                    // 開始時刻を過ぎた → 自動開始
                     task.startTime = scheduledMs;
                     syncLocal();
                     apiCall({ action: 'update', id: task.id, fields: { startTime: task.startTime } });
                     changed = true;
                 } else if (task.startTime > 0 && now >= endMs) {
+                    // 終了時刻を過ぎた → 自動終了
                     task.actual = Math.max(1, Math.round((endMs - task.startTime) / 60000));
                     task.done = true;
                     syncLocal();
