@@ -32,28 +32,63 @@
             background: #f5f5f7;
         }
 
-        /* 全体を左右に分割 */
+        /* 全体レイアウト */
         #main {
             display: flex;
             height: 100vh;
             overflow: hidden;
+            flex-direction: column;
         }
 
-        /* 右側のメイン領域*/
         #todayArea {
             flex: 1;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 上部バー */
+        #mobileBar {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 10px 24px;
+        }
+
+        #topBarInner {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #calendarControls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #calendarControls button {
+            background-color: #e0e0e5;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 16px;
+            color: #333;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
 
         #timebar {
+            flex: 1;
             color: #333;
-            padding: 8px 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
-            width: 100%;
         }
 
         #timebar input[type="time"] {
@@ -67,35 +102,19 @@
             cursor: pointer;
         }
 
+        /* コンテンツエリア */
         #container {
             flex: 1;
             display: flex;
             overflow: hidden;
-        }
-
-        #calendarControls {
-            margin: 90px 0 30px 0;
-            display: flex;
-            /* 中のボタンとタイトルを中央に */
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #calendarControls button,
-        #newtask button {
-            background-color: #e0e0e5;
-            border: none;
-            border-radius: 8px;
-            padding: 4px 10px;
-            font-size: 16px;
-            color: #333;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            align-self: stretch;
         }
 
         #tasklist {
-            flex: 0 0 300px;
+            flex: 0 0 55%;
             display: flex;
             flex-direction: column;
             border-right: 1px solid #ccc;
@@ -111,60 +130,15 @@
             flex-direction: column;
         }
 
-        /* 追加：ボタン用の中央揃えラッパー */
         #addBtnWrap {
             display: flex;
             justify-content: center;
             padding: 12px 0;
-            /* 余白は好みで */
-        }
-
-        #mobileBar {
-            display: none;
         }
 
         @media screen and (max-width: 800px) {
-            #mobileBar {
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                /* 中央揃え */
-                gap: 8px;
-                padding: 8px 12px;
-                background: #fff;
-                border-bottom: 1px solid #eee;
-            }
-
-            /* 移設後も中身が中央に見えるように */
-            #mobileBar #calendarControls {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 10px;
-                margin: 0;
-            }
-
-            #mobileBar #timebar {
-                gap: 12px;
-                width: 100%;
-                padding: 6px 0;
-            }
-
-            #left-sidebar {
-                display: none !important;
-            }
-
-            #tasklist {
-                flex: 0 0 55%;
-            }
-
-            #calendar {
-                flex: 1 !important;
-            }
-
-            .omit-text {
-                display: none;
-            }
+            #mobileBar { padding: 8px 12px; }
+            .omit-text { display: none; }
         }
 
         #tasks {
@@ -419,19 +393,6 @@
             transform: scale(1.15);
         }
 
-        #left-sidebar {
-            flex: 0 0 180px;
-            padding: 0;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: #fff;
-            position: relative;
-            z-index: 1;
-            box-shadow: 8px 0 18px -10px rgba(0, 0, 0, 0.2);
-        }
-
         /* 土曜を青に */
         .fc .fc-day-sat {
             color: blue;
@@ -569,23 +530,24 @@
 
 <body>
     <div id="main">
-        <div id="left-sidebar">
-            <div id="calendarControls">
-                <button id="prevBtn">&lt;</button>
-                <span id="calendarTitle"></span>
-                <button id="nextBtn">&gt;</button>
-            </div>
-            <div id="timebar">
-                <button id="dashboardBtn">📊</button>
-                <div>
-                    <span>開始<span class="omit-text">時刻:</span> <span id="startTimeDisplay">09:00</span></span>
-                    <br><span>終了<span class="omit-text">予定:</span> <span id="endTimeDisplay">--:--</span></span>
-                </div>
-                <button id="settingsBtn" title="設定" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⚙</button>
-            </div>
-        </div>
         <div id="todayArea">
-            <div id="mobileBar"></div>
+            <div id="mobileBar">
+                <div id="topBarInner">
+                    <div id="calendarControls">
+                        <button id="prevBtn">&lt;</button>
+                        <span id="calendarTitle"></span>
+                        <button id="nextBtn">&gt;</button>
+                    </div>
+                    <div id="timebar">
+                        <button id="dashboardBtn">📊</button>
+                        <div>
+                            <span>開始<span class="omit-text">時刻:</span> <span id="startTimeDisplay">09:00</span></span>
+                            <br><span>終了<span class="omit-text">予定:</span> <span id="endTimeDisplay">--:--</span></span>
+                        </div>
+                        <button id="settingsBtn" title="設定" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⚙</button>
+                    </div>
+                </div>
+            </div>
             <div id="container">
                 <div id="tasklist">
                     <div id="tasks-container">
@@ -1298,7 +1260,7 @@
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
-                    initialView: 'timeGridThreeDay',
+                    initialView: 'timeGridDay',
                     height: '100%',
                     slotMinTime: startTime + ":00",
                     slotMaxTime: "33:00:00",
@@ -1306,21 +1268,12 @@
                     allDaySlot: false,
                     locale: 'ja',
                     editable: false,
-                    eventOverlap: true, // ← false にすると重ね表示できなくなるので true のままでよい
+                    eventOverlap: true,
                     eventOrderStrict: true,
                     eventOrder: 'start,-duration,allDay,title',
-                    // ← 3日間のカスタムビューを追加
-                    views: {
-                        timeGridThreeDay: {
-                            type: 'timeGrid',
-                            duration: { days: 3 },      // 常に3日表示
-                            dateIncrement: { days: 1 }  // ＜/＞ボタンで1日ずつスライド
-                        }
-                    },
                     datesSet(info) {
-                        // 3日間のうち先頭日だけ表示
                         const startStr = info.startStr.slice(0, 10);
-                        currentDate = startStr; // 左のリストは先頭日を基準
+                        currentDate = startStr;
                         const youbi = ["日", "月", "火", "水", "木", "金", "土"];
                         const s = new Date(startStr);
                         titleEl.textContent = `${s.getMonth() + 1}/${s.getDate()}(${youbi[s.getDay()]})`;
@@ -1460,63 +1413,6 @@
                         addNewTask();
                     }
                 });
-
-                // ===== スマホ/PC 切替で要素を移設・ビュー変更 =====
-                const mql = window.matchMedia('(max-width: 800px)');
-
-                function ensureMobileBar() {
-                    let bar = document.getElementById('mobileBar');
-                    if (!bar) {
-                        bar = document.createElement('div');
-                        bar.id = 'mobileBar';
-                        // todayArea の container の直前に挿入
-                        const todayArea = document.getElementById('todayArea');
-                        const container = document.getElementById('container');
-                        if (todayArea && container) todayArea.insertBefore(bar, container);
-                    }
-                    return bar;
-                }
-
-                // 安全な移動ヘルパー
-                function move(node, parent, before = null) {
-                    if (!node || !parent) return;                 // ← null なら何もしない
-                    if (before && before.parentNode === parent) {
-                        parent.insertBefore(node, before);
-                    } else {
-                        parent.appendChild(node);
-                    }
-                }
-
-                function applyResponsive() {
-                    const leftSidebar = document.getElementById('left-sidebar');
-                    const mobileBar = ensureMobileBar();
-                    const calCtrls = document.getElementById('calendarControls');
-                    const timebarEl = document.getElementById('timebar');
-
-                    if (mql.matches) {
-                        // スマホ：mobileBar へ移設
-                        move(calCtrls, mobileBar);
-                        move(timebarEl, mobileBar);
-                        if (calendar && calendar.view.type !== 'timeGridDay') {
-                            calendar.changeView('timeGridDay');
-                        }
-                    } else {
-                        // PC：left-sidebar に戻す
-                        move(calCtrls, leftSidebar, leftSidebar?.firstChild || null);
-                        move(timebarEl, leftSidebar);
-                        if (calendar && calendar.view.type !== 'timeGridThreeDay') {
-                            calendar.changeView('timeGridThreeDay');
-                        }
-                    }
-                    // レイアウト確定後にサイズ再計算（右欠け対策）
-                    if (calendar) requestAnimationFrame(() => calendar.updateSize());
-                }
-
-                // 監視（古いSafari対策込み）
-                if (mql.addEventListener) mql.addEventListener('change', applyResponsive);
-                else mql.addListener(applyResponsive);
-
-                applyResponsive(); // 初回適用
 
                 // 開始時刻固定タスクの自動開始・自動終了
                 checkAutoScheduled();
