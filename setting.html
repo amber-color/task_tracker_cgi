@@ -64,6 +64,20 @@
             outline: none;
         }
         .setting-row input[type="time"]:focus { border-color: #555; }
+        .slot-height-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .slot-height-row input[type="range"] {
+            width: 120px;
+            accent-color: #333;
+        }
+        .slot-label {
+            font-size: 12px;
+            color: #888;
+            min-width: 12px;
+        }
         .logout-btn {
             width: 100%;
             padding: 12px;
@@ -224,6 +238,18 @@
             <p id="templateEmpty" style="color:#aaa;font-size:14px;margin:0;">テンプレートはありません</p>
         </div>
         <button class="add-tpl-btn" id="addTemplateBtn">＋ テンプレートを追加</button>
+    </div>
+
+    <div class="section">
+        <h2>カレンダー</h2>
+        <div class="setting-row">
+            <label>スロット高さ</label>
+            <div class="slot-height-row">
+                <span class="slot-label">小</span>
+                <input type="range" id="slotHeightInput" min="1" max="5" step="1">
+                <span class="slot-label">大</span>
+            </div>
+        </div>
     </div>
 
     <div class="section">
@@ -665,6 +691,12 @@
         startTimeInput.value = localStorage.getItem('startTime') || '09:00';
         startTimeInput.addEventListener('change', () => {
             localStorage.setItem('startTime', startTimeInput.value);
+        });
+
+        const slotHeightInput = document.getElementById('slotHeightInput');
+        slotHeightInput.value = localStorage.getItem('slotHeightLevel') || '3';
+        slotHeightInput.addEventListener('input', () => {
+            localStorage.setItem('slotHeightLevel', slotHeightInput.value);
         });
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {

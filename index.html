@@ -345,7 +345,7 @@
         }
 
         .fc-timegrid-slot {
-            height: 90px !important;
+            height: var(--slot-height, 90px) !important;
             background-color: #fff !important;
         }
 
@@ -631,6 +631,10 @@
 
         const tasksEl = document.getElementById("tasks");
         let startTime = localStorage.getItem('startTime') || '09:00';
+
+        const SLOT_HEIGHTS = [36, 60, 90, 120, 150];
+        const slotHeightLevel = parseInt(localStorage.getItem('slotHeightLevel') || '3');
+        document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[slotHeightLevel - 1] + 'px');
         const endTimeDisplay = document.getElementById("endTimeDisplay");
         document.getElementById("startTimeDisplay").textContent = startTime;
 
