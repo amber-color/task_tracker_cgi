@@ -202,17 +202,18 @@ $action = $data['action'] ?? '';
 $pdo = getDB();
 
 const FIELD_MAP = [
-    'date'        => 'date',
-    'title'       => 'title',
-    'memo'        => 'memo',
-    'url'         => 'url',
-    'done'        => 'done',
-    'color'       => 'color',
-    'estimate'    => 'estimate',
-    'actual'      => 'actual',
-    'order'       => 'task_order',
-    'startTime'   => 'start_time',
-    'repeatDays'  => 'repeat_days',
+    'date'          => 'date',
+    'title'         => 'title',
+    'memo'          => 'memo',
+    'url'           => 'url',
+    'done'          => 'done',
+    'color'         => 'color',
+    'estimate'      => 'estimate',
+    'actual'        => 'actual',
+    'order'         => 'task_order',
+    'startTime'     => 'start_time',
+    'repeatDays'    => 'repeat_days',
+    'scheduledTime' => 'scheduled_time',
 ];
 
 if ($action === 'load') {
@@ -325,21 +326,22 @@ if ($action === 'add') {
         exit;
     }
     $stmt = $pdo->prepare('INSERT OR REPLACE INTO tasks
-        (id, user_id, date, title, memo, url, done, color, estimate, actual, task_order, start_time, repeat_days)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        (id, user_id, date, title, memo, url, done, color, estimate, actual, task_order, start_time, repeat_days, scheduled_time)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
     $stmt->execute([
         $id, $userId,
-        $t['date']        ?? '',
-        $t['title']       ?? '',
-        $t['memo']        ?? '',
-        $t['url']         ?? '',
-        ($t['done']       ?? false) ? 1 : 0,
-        $t['color']       ?? '#B2DFDB',
+        $t['date']           ?? '',
+        $t['title']          ?? '',
+        $t['memo']           ?? '',
+        $t['url']            ?? '',
+        ($t['done']          ?? false) ? 1 : 0,
+        $t['color']          ?? '#B2DFDB',
         (int)($t['estimate'] ?? 15),
         (int)($t['actual']   ?? 0),
         (int)($t['order']    ?? 0),
         (int)($t['startTime']?? 0),
         json_encode($t['repeatDays'] ?? []),
+        $t['scheduledTime']  ?? '',
     ]);
     $stmt = $pdo->prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?');
     $stmt->execute([$id, $userId]);
