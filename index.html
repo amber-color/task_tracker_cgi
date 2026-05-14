@@ -639,6 +639,7 @@
         let calendar;
         let editingId = null;
         let pendingNewTask = null;
+        let autoStartNext = false;
 
         const tasksEl = document.getElementById("tasks");
         let startTime = localStorage.getItem('startTime') || '09:00';
@@ -870,6 +871,12 @@
             task.done = true;
             syncLocal();
             apiCall({ action: 'update', id, fields: { done: true, actual: task.actual } });
+            if (autoStartNext) {
+                const next = allTasks
+                    .filter(t => t.date === task.date && !t.done && t.startTime === 0 && !t.scheduledTime)
+                    .sort((a, b) => a.order - b.order)[0];
+                if (next) startTask(next.id);
+            }
             renderTasks();
             requestAnimationFrame(() => refreshNowIndicator());
         }
@@ -1244,6 +1251,7 @@
 
                 const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
                 const savedView = userSettings['calendarView'] ?? 'timeGridDay';
+                autoStartNext = userSettings['autoStartNext'] === '1';
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
