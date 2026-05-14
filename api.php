@@ -547,5 +547,27 @@ if ($action === 'migrate_past') {
     exit;
 }
 
+if ($action === 'get_settings') {
+    $stmt = $pdo->prepare('SELECT key, value FROM user_settings WHERE user_id=?');
+    $stmt->execute([$userId]);
+    $settings = [];
+    foreach ($stmt->fetchAll() as $row) { $settings[$row['key']] = $row['value']; }
+    echo json_encode((object)$settings);
+    exit;
+}
+
+if ($action === 'save_setting') {
+    $key   = $data['key']   ?? '';
+    $value = $data['value'] ?? '';
+    if ($key === '') { http_response_code(400); echo json_encode(['ok' => false]); exit; }
+    $stmt = $pdo->prepare(
+        'INSERT INTO user_settings(user_id, key, value) VALUES(?,?,?)
+         ON CONFLICT(user_id, key) DO UPDATE SET value=excluded.value'
+    );
+    $stmt->execute([$userId, $key, $value]);
+    echo json_encode(['ok' => true]);
+    exit;
+}
+
 http_response_code(400);
 echo json_encode(['ok' => false, 'error' => '不正なアクション']);

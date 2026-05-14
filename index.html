@@ -639,6 +639,7 @@
         let calendar;
         let editingId = null;
         let pendingNewTask = null;
+        let lastCalendarView = null;
 
         const tasksEl = document.getElementById("tasks");
         let startTime = localStorage.getItem('startTime') || '09:00';
@@ -1242,9 +1243,12 @@
                     await loadTasks();
                 }
 
+                const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
+                const savedView = userSettings['calendarView'] ?? 'timeGridDay';
+
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
-                    initialView: 'timeGridDay',
+                    initialView: savedView,
                     height: '100%',
                     slotMinTime: startTime + ":00",
                     slotMaxTime: "33:00:00",
@@ -1275,6 +1279,10 @@
                         document.querySelectorAll('.view-btn').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
+                        if (lastCalendarView !== null && viewType !== lastCalendarView) {
+                            apiCall({ action: 'save_setting', key: 'calendarView', value: viewType });
+                        }
+                        lastCalendarView = viewType;
                         renderTasks();
                     },
                     eventDidMount(info) {
