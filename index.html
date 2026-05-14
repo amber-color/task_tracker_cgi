@@ -640,6 +640,7 @@
         let editingId = null;
         let pendingNewTask = null;
         let autoStartNext = false;
+        let lastCalendarView = null;
 
         const tasksEl = document.getElementById("tasks");
         let startTime = localStorage.getItem('startTime') || '09:00';
@@ -1286,10 +1287,10 @@
                         document.querySelectorAll('.view-btn').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
-                        if (viewType !== (datesSet._lastView ?? savedView)) {
+                        if (viewType !== (lastCalendarView ?? savedView)) {
                             apiCall({ action: 'save_setting', key: 'calendarView', value: viewType });
                         }
-                        datesSet._lastView = viewType;
+                        lastCalendarView = viewType;
                         renderTasks();
                     },
                     eventDidMount(info) {
