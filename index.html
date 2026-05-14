@@ -156,6 +156,7 @@
         @media screen and (max-width: 800px) {
             #mobileBar { padding: 8px 12px; }
             .omit-text { display: none; }
+            #viewSwitcher { display: none; }
         }
 
         #tasks {
@@ -1244,7 +1245,8 @@
                 }
 
                 const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
-                const savedView = userSettings['calendarView'] ?? 'timeGridDay';
+                const isMobile = window.matchMedia('(max-width: 800px)').matches;
+                const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? 'timeGridDay');
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
