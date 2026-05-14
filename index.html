@@ -635,7 +635,7 @@
             "#9FA8DA", "#90CAF9", "#80DEEA", "#80CBC4",
             "#A5D6A7", "#C5E1A5", "#FFF176", "#FFE082"
         ];
-        let currentDate;
+        let currentDate = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
         let calendar;
         let editingId = null;
         let pendingNewTask = null;
