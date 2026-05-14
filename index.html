@@ -57,12 +57,9 @@
         }
 
         #topBarInner {
-            max-width: 900px;
-            margin: 0 auto;
             width: 100%;
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: 8px;
         }
 
@@ -81,6 +78,27 @@
             color: #333;
             cursor: pointer;
             transition: background-color 0.2s;
+        }
+
+        #viewSwitcher {
+            display: flex;
+            gap: 4px;
+        }
+
+        .view-btn {
+            background: #e0e0e5;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .view-btn.active {
+            background: #333;
+            color: #fff;
         }
 
         #timebar {
@@ -106,14 +124,13 @@
             flex: 1;
             display: flex;
             overflow: hidden;
-            max-width: 900px;
             width: 100%;
-            margin: 0 auto;
             align-self: stretch;
         }
 
         #tasklist {
-            flex: 0 0 55%;
+            flex: 0 0 25%;
+            min-width: 220px;
             display: flex;
             flex-direction: column;
             border-right: 1px solid #ccc;
@@ -315,11 +332,10 @@
 
 
 
-        /*
-        #calendar .fc-col-header {
+        #calendar .fc-timeGridDay-view .fc-col-header {
             display: none !important;
         }
-*/
+
         #calendar .fc-header-toolbar {
             display: none !important;
         }
@@ -536,6 +552,11 @@
                         <button id="prevBtn">&lt;</button>
                         <span id="calendarTitle"></span>
                         <button id="nextBtn">&gt;</button>
+                        <div id="viewSwitcher">
+                            <button class="view-btn active" data-view="timeGridDay">日</button>
+                            <button class="view-btn" data-view="timeGridWeek">週</button>
+                            <button class="view-btn" data-view="dayGridMonth">月</button>
+                        </div>
                     </div>
                     <div id="timebar">
                         <button id="dashboardBtn">📊</button>
@@ -1227,7 +1248,6 @@
                     slotMinTime: startTime + ":00",
                     slotMaxTime: "33:00:00",
                     nowIndicator: true,
-                    dayHeaders: false,
                     allDaySlot: false,
                     locale: 'ja',
                     editable: false,
@@ -1235,11 +1255,27 @@
                     eventOrderStrict: true,
                     eventOrder: 'start,-duration,allDay,title',
                     datesSet(info) {
-                        const startStr = info.startStr.slice(0, 10);
-                        currentDate = startStr;
+                        const viewType = info.view.type;
                         const youbi = ["日", "月", "火", "水", "木", "金", "土"];
-                        const s = new Date(startStr);
-                        titleEl.textContent = `${s.getMonth() + 1}/${s.getDate()}(${youbi[s.getDay()]})`;
+                        if (viewType === 'timeGridDay') {
+                            const startStr = info.startStr.slice(0, 10);
+                            currentDate = startStr;
+                            const s = new Date(startStr);
+                            titleEl.textContent = `${s.getMonth() + 1}/${s.getDate()}(${youbi[s.getDay()]})`;
+                        } else if (viewType === 'timeGridWeek') {
+                            const s = new Date(info.startStr.slice(0, 10));
+                            const e = new Date(info.endStr.slice(0, 10));
+                            e.setDate(e.getDate() - 1);
+                            currentDate = info.startStr.slice(0, 10);
+                            titleEl.textContent = `${s.getMonth()+1}/${s.getDate()}(${youbi[s.getDay()]})〜${e.getMonth()+1}/${e.getDate()}(${youbi[e.getDay()]})`;
+                        } else if (viewType === 'dayGridMonth') {
+                            const cur = info.view.currentStart;
+                            currentDate = cur.toISOString().slice(0, 10);
+                            titleEl.textContent = `${cur.getFullYear()}年${cur.getMonth()+1}月`;
+                        }
+                        document.querySelectorAll('.view-btn').forEach(btn => {
+                            btn.classList.toggle('active', btn.dataset.view === viewType);
+                        });
                         renderTasks();
                     },
                     eventDidMount(info) {
@@ -1266,6 +1302,9 @@
 
                 document.getElementById("prevBtn").onclick = () => { calendar.prev(); };
                 document.getElementById("nextBtn").onclick = () => { calendar.next(); };
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.addEventListener('click', () => { calendar.changeView(btn.dataset.view); });
+                });
 
                 new Sortable(tasksEl, {
                     animation: 150,
