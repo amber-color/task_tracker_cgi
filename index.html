@@ -142,7 +142,7 @@
         #tasks-container {
             flex: 1;
             overflow-y: auto;
-            padding: 10px 10px 10px 16px;
+            padding: 16px 20px 16px 24px;
             display: flex;
             flex-direction: column;
         }
@@ -1242,9 +1242,12 @@
                     await loadTasks();
                 }
 
+                const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
+                const savedView = userSettings['calendarView'] ?? 'timeGridDay';
+
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
-                    initialView: 'timeGridDay',
+                    initialView: savedView,
                     height: '100%',
                     slotMinTime: startTime + ":00",
                     slotMaxTime: "33:00:00",
@@ -1275,6 +1278,10 @@
                         document.querySelectorAll('.view-btn').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
+                        if (viewType !== (datesSet._lastView ?? savedView)) {
+                            apiCall({ action: 'save_setting', key: 'calendarView', value: viewType });
+                        }
+                        datesSet._lastView = viewType;
                         renderTasks();
                     },
                     eventDidMount(info) {
