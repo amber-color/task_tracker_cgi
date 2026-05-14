@@ -1266,11 +1266,9 @@
                             const s = new Date(info.startStr.slice(0, 10));
                             const e = new Date(info.endStr.slice(0, 10));
                             e.setDate(e.getDate() - 1);
-                            currentDate = info.startStr.slice(0, 10);
                             titleEl.textContent = `${s.getMonth()+1}/${s.getDate()}(${youbi[s.getDay()]})〜${e.getMonth()+1}/${e.getDate()}(${youbi[e.getDay()]})`;
                         } else if (viewType === 'dayGridMonth') {
                             const cur = info.view.currentStart;
-                            currentDate = cur.toISOString().slice(0, 10);
                             titleEl.textContent = `${cur.getFullYear()}年${cur.getMonth()+1}月`;
                         }
                         document.querySelectorAll('.view-btn').forEach(btn => {
