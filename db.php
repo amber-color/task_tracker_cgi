@@ -63,13 +63,6 @@ function getDB(): PDO {
 
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_tasks_template_id ON tasks(template_id)");
 
-    $pdo->exec("CREATE TABLE IF NOT EXISTS user_settings (
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        key     TEXT    NOT NULL,
-        value   TEXT    NOT NULL DEFAULT '',
-        PRIMARY KEY (user_id, key)
-    )");
-
     return $pdo;
 }
 

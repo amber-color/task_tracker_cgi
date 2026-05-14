@@ -124,7 +124,6 @@
         #container {
             flex: 1;
             display: flex;
-            flex-direction: row;
             overflow: hidden;
             width: 100%;
             align-self: stretch;
@@ -133,17 +132,17 @@
         #tasklist {
             flex: 0 0 25%;
             min-width: 220px;
-            min-height: 0;
             display: flex;
             flex-direction: column;
             border-right: 1px solid #ccc;
+            height: 100%;
             background: white;
         }
 
         #tasks-container {
             flex: 1;
             overflow-y: auto;
-            padding: 16px 20px 16px 24px;
+            padding: 10px 10px 10px 16px;
             display: flex;
             flex-direction: column;
         }
@@ -246,8 +245,6 @@
 
         #calendar {
             flex: 1;
-            min-width: 0;
-            min-height: 0;
             overflow-y: auto;
         }
 
@@ -638,12 +635,10 @@
             "#9FA8DA", "#90CAF9", "#80DEEA", "#80CBC4",
             "#A5D6A7", "#C5E1A5", "#FFF176", "#FFE082"
         ];
-        let currentDate = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        let currentDate;
         let calendar;
         let editingId = null;
         let pendingNewTask = null;
-        let autoStartNext = false;
-        let lastCalendarView = null;
 
         const tasksEl = document.getElementById("tasks");
         let startTime = localStorage.getItem('startTime') || '09:00';
@@ -875,12 +870,6 @@
             task.done = true;
             syncLocal();
             apiCall({ action: 'update', id, fields: { done: true, actual: task.actual } });
-            if (autoStartNext) {
-                const next = allTasks
-                    .filter(t => t.date === task.date && !t.done && t.startTime === 0 && !t.scheduledTime)
-                    .sort((a, b) => a.order - b.order)[0];
-                if (next) startTask(next.id);
-            }
             renderTasks();
             requestAnimationFrame(() => refreshNowIndicator());
         }
@@ -1253,13 +1242,9 @@
                     await loadTasks();
                 }
 
-                const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
-                const savedView = userSettings['calendarView'] ?? 'timeGridDay';
-                autoStartNext = userSettings['autoStartNext'] === '1';
-
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
-                    initialView: savedView,
+                    initialView: 'timeGridDay',
                     height: '100%',
                     slotMinTime: startTime + ":00",
                     slotMaxTime: "33:00:00",
@@ -1290,10 +1275,6 @@
                         document.querySelectorAll('.view-btn').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
-                        if (viewType !== (lastCalendarView ?? savedView)) {
-                            apiCall({ action: 'save_setting', key: 'calendarView', value: viewType });
-                        }
-                        lastCalendarView = viewType;
                         renderTasks();
                     },
                     eventDidMount(info) {
