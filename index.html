@@ -560,6 +560,7 @@
                             <button class="view-btn active" data-view="timeGridDay">日</button>
                             <button class="view-btn" data-view="timeGridWeek">週</button>
                             <button class="view-btn" data-view="dayGridMonth">月</button>
+                            <button id="weekdayBtn" class="view-btn">平日</button>
                         </div>
                     </div>
                     <div id="timebar">
@@ -648,8 +649,6 @@
         let startTime = localStorage.getItem('startTime') || '09:00';
 
         const SLOT_HEIGHTS = [36, 60, 90, 120, 150];
-        const slotHeightLevel = parseInt(localStorage.getItem('slotHeightLevel') || '3');
-        document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[slotHeightLevel - 1] + 'px');
         const endTimeDisplay = document.getElementById("endTimeDisplay");
         document.getElementById("startTimeDisplay").textContent = startTime;
 
@@ -1248,11 +1247,19 @@
 
                 const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
                 const isMobile = window.matchMedia('(max-width: 800px)').matches;
+
+                const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? '3');
+                document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[slotLevel - 1] + 'px');
+
+                let weekdaysOnly = !isMobile && userSettings['weekdaysOnly'] === '1';
+                document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
+
                 const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? 'timeGridDay');
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
                     initialView: savedView,
+                    weekends: !weekdaysOnly,
                     height: '100%',
                     slotMinTime: startTime + ":00",
                     slotMaxTime: "33:00:00",
@@ -1313,8 +1320,14 @@
 
                 document.getElementById("prevBtn").onclick = () => { calendar.prev(); };
                 document.getElementById("nextBtn").onclick = () => { calendar.next(); };
-                document.querySelectorAll('.view-btn').forEach(btn => {
+                document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.addEventListener('click', () => { calendar.changeView(btn.dataset.view); });
+                });
+                document.getElementById('weekdayBtn').addEventListener('click', () => {
+                    weekdaysOnly = !weekdaysOnly;
+                    document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
+                    calendar.setOption('weekends', !weekdaysOnly);
+                    apiCall({ action: 'save_setting', key: 'weekdaysOnly', value: weekdaysOnly ? '1' : '0' });
                 });
 
                 new Sortable(tasksEl, {

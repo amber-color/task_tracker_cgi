@@ -700,10 +700,11 @@
             localStorage.setItem('startTime', startTimeInput.value);
         });
 
+        const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
         const slotHeightInput = document.getElementById('slotHeightInput');
-        slotHeightInput.value = localStorage.getItem('slotHeightLevel') || '3';
+        slotHeightInput.value = userSettings['slotHeightLevel'] ?? '3';
         slotHeightInput.addEventListener('input', () => {
-            localStorage.setItem('slotHeightLevel', slotHeightInput.value);
+            apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value });
         });
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {
