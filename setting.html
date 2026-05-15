@@ -702,8 +702,9 @@
 
         const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
         const slotHeightInput = document.getElementById('slotHeightInput');
-        slotHeightInput.value = userSettings['slotHeightLevel'] ?? '3';
-        slotHeightInput.addEventListener('input', () => {
+        slotHeightInput.value = userSettings['slotHeightLevel'] ?? localStorage.getItem('slotHeightLevel') ?? '3';
+        slotHeightInput.addEventListener('change', () => {
+            localStorage.setItem('slotHeightLevel', slotHeightInput.value);
             apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value });
         });
 
