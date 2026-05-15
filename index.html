@@ -251,14 +251,10 @@
             overflow-y: auto;
         }
 
-        /* 週表示: 日ごとの境界線 */
-        #calendar .fc-timeGridWeek-view .fc-timegrid-col,
-        #calendar .fc-timeGridWeek-view .fc-col-header-cell {
-            border-left: 1px solid #ddd !important;
-        }
-        #calendar .fc-timeGridWeek-view .fc-timegrid-col:first-child,
-        #calendar .fc-timeGridWeek-view .fc-col-header-cell:first-child {
-            border-left: none !important;
+        /* 週表示: 日ごとの境界線 (box-shadow はborder-collapseの影響を受けない) */
+        #calendar .fc-timeGridWeek-view td.fc-timegrid-col ~ td.fc-timegrid-col,
+        #calendar .fc-timeGridWeek-view .fc-col-header-cell ~ .fc-col-header-cell {
+            box-shadow: inset 1px 0 0 #ddd;
         }
 
         .task-actions {
@@ -642,12 +638,13 @@
         let calendar;
         let editingId = null;
         let pendingNewTask = null;
-        let lastCalendarView = null;
-
         const tasksEl = document.getElementById("tasks");
         let startTime = localStorage.getItem('startTime') || '09:00';
 
         const SLOT_HEIGHTS = [36, 60, 90, 120, 150];
+        // localStorage から即時反映（DB 取得前の初期表示用）
+        const _initSlotLevel = parseInt(localStorage.getItem('slotHeightLevel') || '3');
+        document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[_initSlotLevel - 1] + 'px');
         const endTimeDisplay = document.getElementById("endTimeDisplay");
         document.getElementById("startTimeDisplay").textContent = startTime;
 
@@ -1247,8 +1244,9 @@
                 const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
                 const isMobile = window.matchMedia('(max-width: 800px)').matches;
 
-                const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? '3');
+                const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? localStorage.getItem('slotHeightLevel') ?? '3');
                 document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[slotLevel - 1] + 'px');
+                localStorage.setItem('slotHeightLevel', String(slotLevel));
 
                 let weekdaysOnly = !isMobile && userSettings['weekdaysOnly'] === '1';
                 document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
@@ -1289,10 +1287,6 @@
                         document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
-                        if (lastCalendarView !== null && viewType !== lastCalendarView) {
-                            apiCall({ action: 'save_setting', key: 'calendarView', value: viewType });
-                        }
-                        lastCalendarView = viewType;
                         renderTasks();
                     },
                     eventDidMount(info) {
@@ -1320,7 +1314,10 @@
                 document.getElementById("prevBtn").onclick = () => { calendar.prev(); };
                 document.getElementById("nextBtn").onclick = () => { calendar.next(); };
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
-                    btn.addEventListener('click', () => { calendar.changeView(btn.dataset.view); });
+                    btn.addEventListener('click', () => {
+                        calendar.changeView(btn.dataset.view);
+                        apiCall({ action: 'save_setting', key: 'calendarView', value: btn.dataset.view });
+                    });
                 });
                 document.getElementById('weekdayBtn').addEventListener('click', () => {
                     weekdaysOnly = !weekdaysOnly;
