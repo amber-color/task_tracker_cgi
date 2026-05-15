@@ -251,15 +251,14 @@
             overflow-y: auto;
         }
 
-        /* 3日間のカレンダー列に境界線を追加 */
-        #calendar .fc-timegrid-col {
-            border-right: 2px solid #ccc;
-            /* 境界線の太さ・色は調整可 */
+        /* 週表示: 日ごとの境界線 */
+        #calendar .fc-timeGridWeek-view .fc-timegrid-col,
+        #calendar .fc-timeGridWeek-view .fc-col-header-cell {
+            border-left: 1px solid #ddd !important;
         }
-
-        /* 最後の列は境界線を消す */
-        #calendar .fc-timegrid-col:last-child {
-            border-right: none;
+        #calendar .fc-timeGridWeek-view .fc-timegrid-col:first-child,
+        #calendar .fc-timeGridWeek-view .fc-col-header-cell:first-child {
+            border-left: none !important;
         }
 
         .task-actions {
@@ -1287,7 +1286,7 @@
                             const cur = info.view.currentStart;
                             titleEl.textContent = `${cur.getFullYear()}年${cur.getMonth()+1}月`;
                         }
-                        document.querySelectorAll('.view-btn').forEach(btn => {
+                        document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
                         if (lastCalendarView !== null && viewType !== lastCalendarView) {
