@@ -718,21 +718,39 @@
         }
 
         const startTimeInput = document.getElementById('startTimeInput');
-        startTimeInput.value = localStorage.getItem('startTime') || '09:00';
+        const slotHeightInput = document.getElementById('slotHeightInput');
+
+        // まずlocalStorageで即時表示
+        startTimeInput.value = localStorage.getItem('startTime') ?? '09:00';
+        slotHeightInput.value = localStorage.getItem('slotHeightLevel') ?? '3';
+
+        // SQLiteから正規値を取得してlocalStorageと同期
+        const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
+        if (userSettings['startTime'] != null) {
+            startTimeInput.value = userSettings['startTime'];
+            localStorage.setItem('startTime', userSettings['startTime']);
+        }
+        if (userSettings['slotHeightLevel'] != null) {
+            slotHeightInput.value = userSettings['slotHeightLevel'];
+            localStorage.setItem('slotHeightLevel', userSettings['slotHeightLevel']);
+        }
+
+        // 変更時はSQLiteとlocalStorage両方に保存
         startTimeInput.addEventListener('change', () => {
             localStorage.setItem('startTime', startTimeInput.value);
+            apiCall({ action: 'save_setting', key: 'startTime', value: startTimeInput.value });
         });
-
-        const slotHeightInput = document.getElementById('slotHeightInput');
-        slotHeightInput.value = localStorage.getItem('slotHeightLevel') ?? '3';
         slotHeightInput.addEventListener('change', () => {
             localStorage.setItem('slotHeightLevel', slotHeightInput.value);
+            apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value }, true);
         });
 
         // BFCache（ブラウザの戻るボタン）からの復元時に設定を再読み込み
         window.addEventListener('pageshow', async (event) => {
             if (event.persisted) {
-                slotHeightInput.value = localStorage.getItem('slotHeightLevel') ?? '3';
+                const fresh = await apiCall({ action: 'get_settings' }) ?? {};
+                startTimeInput.value = fresh['startTime'] ?? localStorage.getItem('startTime') ?? '09:00';
+                slotHeightInput.value = fresh['slotHeightLevel'] ?? localStorage.getItem('slotHeightLevel') ?? '3';
                 await loadTemplates();
             }
         });

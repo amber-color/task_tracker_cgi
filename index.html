@@ -1247,14 +1247,25 @@
 
                 const isMobile = window.matchMedia('(max-width: 800px)').matches;
 
-                const slotLevel = parseInt(localStorage.getItem('slotHeightLevel') ?? '3');
-                const slotPx = SLOT_HEIGHTS[slotLevel - 1] + 'px';
-                document.documentElement.style.setProperty('--slot-height', slotPx);
+                // SQLiteから正規値を取得（localStorage はキャッシュ・フォールバック）
+                const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
 
-                let weekdaysOnly = !isMobile && localStorage.getItem('weekdaysOnly') === '1';
+                if (userSettings['startTime'] != null) {
+                    startTime = userSettings['startTime'];
+                    localStorage.setItem('startTime', startTime);
+                    document.getElementById("startTimeDisplay").textContent = startTime;
+                }
+
+                const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? localStorage.getItem('slotHeightLevel') ?? '3');
+                localStorage.setItem('slotHeightLevel', String(slotLevel));
+                document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[slotLevel - 1] + 'px');
+
+                let weekdaysOnly = !isMobile && ((userSettings['weekdaysOnly'] ?? localStorage.getItem('weekdaysOnly')) === '1');
+                if (userSettings['weekdaysOnly'] != null) localStorage.setItem('weekdaysOnly', userSettings['weekdaysOnly']);
                 document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
 
-                const savedView = isMobile ? 'timeGridDay' : (localStorage.getItem('calendarView') ?? 'timeGridDay');
+                const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? localStorage.getItem('calendarView') ?? 'timeGridDay');
+                if (userSettings['calendarView'] != null) localStorage.setItem('calendarView', userSettings['calendarView']);
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
@@ -1340,9 +1351,11 @@
                 requestAnimationFrame(() => calendar.updateSize());
 
                 // BFCache（戻るボタン）からの復元時にスロット高さを再適用
-                window.addEventListener('pageshow', (event) => {
+                window.addEventListener('pageshow', async (event) => {
                     if (!event.persisted) return;
-                    const lvl = parseInt(localStorage.getItem('slotHeightLevel') ?? '3');
+                    const fresh = await apiCall({ action: 'get_settings' }) ?? {};
+                    const lvl = parseInt(fresh['slotHeightLevel'] ?? localStorage.getItem('slotHeightLevel') ?? '3');
+                    localStorage.setItem('slotHeightLevel', String(lvl));
                     document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[lvl - 1] + 'px');
                     if (calendar) calendar.updateSize();
                 });
@@ -1353,6 +1366,7 @@
                     btn.addEventListener('click', () => {
                         calendar.changeView(btn.dataset.view);
                         localStorage.setItem('calendarView', btn.dataset.view);
+                        apiCall({ action: 'save_setting', key: 'calendarView', value: btn.dataset.view });
                     });
                 });
                 document.getElementById('weekdayBtn').addEventListener('click', () => {
@@ -1360,6 +1374,7 @@
                     document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
                     calendar.setOption('weekends', !weekdaysOnly);
                     localStorage.setItem('weekdaysOnly', weekdaysOnly ? '1' : '0');
+                    apiCall({ action: 'save_setting', key: 'weekdaysOnly', value: weekdaysOnly ? '1' : '0' });
                 });
 
                 new Sortable(tasksEl, {
