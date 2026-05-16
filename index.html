@@ -1339,7 +1339,6 @@
                 .sort((a, b) => a.order - b.order)
                 .map(t => t.id);
             apiCall({ action: 'reorder', date: currentDate, order: ids });
-            document.getElementById('sortByTimeBtn').style.display = 'none';
             renderTasks();
         });
 
