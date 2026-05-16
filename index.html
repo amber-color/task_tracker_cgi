@@ -251,8 +251,17 @@
             overflow-y: auto;
         }
 
-        /* 週表示: 日ごとの境界線は datesSet 内で JS が付与する */
-        .fc-week-col-divider { border-left: 2px solid #ccc !important; }
+        /* 週表示: ヘッダー境界線 */
+        .fc-week-col-divider { border-left: 1px solid #ddd !important; }
+        /* 週表示: タイムライン列の区切り線（絶対配置divで描画） */
+        .fc-week-lane-divider {
+            position: absolute;
+            top: 0; left: 0;
+            width: 1px; height: 100%;
+            background: #ddd;
+            pointer-events: none;
+            z-index: 2;
+        }
 
         .task-actions {
             display: flex;
@@ -1280,13 +1289,21 @@
                         document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
-                        // 週表示の日境界線を JS で付与（CSS セレクタより確実）
+                        // 週表示の日境界線を JS で付与
                         requestAnimationFrame(() => {
-                            document.querySelectorAll('#fc .fc-timegrid-col').forEach((el, i) => {
-                                el.classList.toggle('fc-week-col-divider', i > 0 && viewType === 'timeGridWeek');
-                            });
+                            // ヘッダーはクラスで border-left
                             document.querySelectorAll('#fc .fc-col-header-cell').forEach((el, i) => {
                                 el.classList.toggle('fc-week-col-divider', i > 0 && viewType === 'timeGridWeek');
+                            });
+                            // タイムライン列は border-collapse に影響されない絶対配置 div を挿入
+                            document.querySelectorAll('#fc .fc-timegrid-col').forEach((el, i) => {
+                                el.querySelectorAll('.fc-week-lane-divider').forEach(d => d.remove());
+                                if (i > 0 && viewType === 'timeGridWeek') {
+                                    const frame = el.querySelector('.fc-timegrid-col-frame') ?? el;
+                                    const div = document.createElement('div');
+                                    div.className = 'fc-week-lane-divider';
+                                    frame.insertBefore(div, frame.firstChild);
+                                }
                             });
                         });
                         renderTasks();
