@@ -251,10 +251,13 @@
             overflow-y: auto;
         }
 
-        /* 週表示: 日ごとの境界線 (box-shadow はborder-collapseの影響を受けない) */
-        #calendar .fc-timeGridWeek-view td.fc-timegrid-col ~ td.fc-timegrid-col,
+        /* 週表示: 日ごとの境界線
+           .fc-timegrid-col-frame は div なので border-collapse 非依存 */
+        #calendar .fc-timeGridWeek-view td.fc-timegrid-col ~ td.fc-timegrid-col > .fc-timegrid-col-frame {
+            border-left: 1px solid #ddd;
+        }
         #calendar .fc-timeGridWeek-view .fc-col-header-cell ~ .fc-col-header-cell {
-            box-shadow: inset 1px 0 0 #ddd;
+            border-left: 1px solid #ddd !important;
         }
 
         .task-actions {
@@ -1251,7 +1254,7 @@
                 let weekdaysOnly = !isMobile && userSettings['weekdaysOnly'] === '1';
                 document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
 
-                const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? 'timeGridDay');
+                const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? localStorage.getItem('calendarView') ?? 'timeGridDay');
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
@@ -1316,6 +1319,7 @@
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         calendar.changeView(btn.dataset.view);
+                        localStorage.setItem('calendarView', btn.dataset.view);
                         apiCall({ action: 'save_setting', key: 'calendarView', value: btn.dataset.view });
                     });
                 });
