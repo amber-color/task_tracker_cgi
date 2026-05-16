@@ -409,12 +409,13 @@
             ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     }
 
-    async function apiCall(body) {
+    async function apiCall(body, keepalive = false) {
         try {
             const res = await fetch('api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify(body),
+                keepalive
             });
             if (res.status === 401) { location.href = 'login.html'; return null; }
             return await res.json();
@@ -445,8 +446,17 @@
     }
 
     async function loadTemplates() {
+        const emptyEl = document.getElementById('templateEmpty');
+        emptyEl.textContent = 'テンプレートはありません';
         const result = await apiCall({ action: 'list_templates' });
-        if (!result) return;
+        if (!Array.isArray(result)) {
+            emptyEl.style.display = '';
+            emptyEl.textContent = result === null
+                ? '⚠ 読み込みエラー（ページを再読み込みしてください）'
+                : 'テンプレートはありません';
+            console.error('list_templates result:', result);
+            return;
+        }
         templates = result;
         renderTemplateList();
     }
@@ -709,7 +719,8 @@
         const slotHeightInput = document.getElementById('slotHeightInput');
         slotHeightInput.value = userSettings['slotHeightLevel'] ?? '3';
         slotHeightInput.addEventListener('change', () => {
-            apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value });
+            // keepalive:true でページ離脱直後でもDBへの保存を保証する
+            apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value }, true);
         });
 
         // BFCache（ブラウザの戻るボタン）からの復元時に設定を再読み込み
