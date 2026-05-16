@@ -323,12 +323,30 @@
             position: absolute;
             top: 0; left: 0;
             width: 1px; height: 100%;
-            background: #ddd;
+            background: #eee;
             pointer-events: none;
             z-index: 2;
         }
         /* 週表示: 時間軸列の右ボーダーを非表示（1日目左はdividerで代替） */
         #calendar .fc-timeGridWeek-view .fc-timegrid-axis { border-right: none !important; }
+
+        /* カレンダー全ボーダーをトップバー下線（1px #eee）に統一 */
+        #calendar .fc-theme-standard td,
+        #calendar .fc-theme-standard th {
+            border-color: #eee !important;
+        }
+        #calendar .fc-scrollgrid {
+            border-color: #eee !important;
+        }
+        /* 左端の外枠ボーダーを除去（scrollgrid自身のborderと列border重複回避） */
+        #calendar .fc-scrollgrid-section-header > td:first-child,
+        #calendar .fc-scrollgrid-section-body > td:first-child {
+            border-left: none !important;
+        }
+        /* 半時間スロットの点線も #eee に統一 */
+        #calendar .fc-timegrid-slot-minor {
+            border-top-color: #eee !important;
+        }
 
         .task-actions {
             display: flex;
