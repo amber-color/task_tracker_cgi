@@ -262,6 +262,34 @@
             /*text-decoration: line-through;*/
         }
 
+        #task-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 6px;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(6px);
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            margin-bottom: 8px;
+            align-self: flex-start;
+        }
+        #task-toolbar button {
+            background: none;
+            border: none;
+            border-radius: 7px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #888;
+            transition: background 0.12s, color 0.12s;
+        }
+        #task-toolbar button:hover { background: #f0f0f0; color: #333; }
+        #task-toolbar button.active { background: #333; color: #fff; }
+
         .working {
             border: 2px solid red;
         }
@@ -662,6 +690,14 @@
             <div id="container">
                 <div id="tasklist">
                     <div id="tasks-container">
+                        <div id="task-toolbar">
+                            <button id="toggleDoneBtn" title="完了タスクの表示／非表示">
+                                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="8"/><path d="M6 10l3 3 5-5"/></svg>
+                            </button>
+                            <button id="sortByTimeBtn" title="開始時刻でソート">
+                                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h12M4 10h8M4 15h5"/><path d="M16 12v6m0 0l-2-2m2 2l2-2"/></svg>
+                            </button>
+                        </div>
                         <div id="tasks"></div>
                         <div id="addBtnWrap">
                             <button id="floatingAddBtn" title="タスク追加（Alt+N）">＋</button>
@@ -730,6 +766,8 @@
         let editingId = null;
         let pendingNewTask = null;
         const tasksEl = document.getElementById("tasks");
+        let hideDone = false;
+        let sortByTime = false;
         let startTime = localStorage.getItem('startTime') || '09:00';
 
         const SLOT_HEIGHTS = [36, 60, 90, 120, 150];
@@ -822,7 +860,13 @@
 
         function renderTasks() {
             //const tasks = getTasks(currentDate);
-            const { tasks } = buildTimeline(currentDate);
+            let { tasks } = buildTimeline(currentDate);
+            if (hideDone) tasks = tasks.filter(t => !t.done);
+            if (sortByTime) {
+                tasks = tasks.slice().sort((a, b) =>
+                    (a.plannedStart?.getTime() ?? Infinity) - (b.plannedStart?.getTime() ?? Infinity)
+                );
+            }
             tasksEl.innerHTML = "";
             tasks.forEach(task => {
                 const div = document.createElement("div");
@@ -1306,6 +1350,17 @@
             const latestPlannedEnd = result.reduce((max, t) => t.plannedEnd > max ? t.plannedEnd : max, new Date(0));
             return { tasks: result, latestEnd: latestPlannedEnd > current ? latestPlannedEnd : current };
         }
+
+        document.getElementById('toggleDoneBtn').addEventListener('click', () => {
+            hideDone = !hideDone;
+            document.getElementById('toggleDoneBtn').classList.toggle('active', hideDone);
+            renderTasks();
+        });
+        document.getElementById('sortByTimeBtn').addEventListener('click', () => {
+            sortByTime = !sortByTime;
+            document.getElementById('sortByTimeBtn').classList.toggle('active', sortByTime);
+            renderTasks();
+        });
 
         document.addEventListener("DOMContentLoaded", () => {
             (async () => {
