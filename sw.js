@@ -1,4 +1,4 @@
-const CACHE = 'task-tracker-v10';
+const CACHE = 'task-tracker-v11';
 const PRECACHE = [
   './',
   './index.html',

@@ -251,9 +251,7 @@
             overflow-y: auto;
         }
 
-        /* 週表示: ヘッダー境界線 */
-        .fc-week-col-divider { border-left: 1px solid #ddd !important; }
-        /* 週表示: タイムライン列の区切り線（絶対配置divで描画） */
+        /* 週表示: ヘッダー・タイムライン共通の列区切り線（絶対配置divで描画） */
         .fc-week-lane-divider {
             position: absolute;
             top: 0; left: 0;
@@ -262,6 +260,8 @@
             pointer-events: none;
             z-index: 2;
         }
+        /* 週表示: 時間軸列の右ボーダーを非表示（1日目左はdividerで代替） */
+        #calendar .fc-timeGridWeek-view .fc-timegrid-axis { border-right: none !important; }
 
         .task-actions {
             display: flex;
@@ -1289,16 +1289,24 @@
                         document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
-                        // 週表示の日境界線を JS で付与
+                        // 週表示の日境界線を JS で付与（ヘッダー・タイムライン統一方式）
                         requestAnimationFrame(() => {
-                            // ヘッダーはクラスで border-left
-                            document.querySelectorAll('#fc .fc-col-header-cell').forEach((el, i) => {
-                                el.classList.toggle('fc-week-col-divider', i > 0 && viewType === 'timeGridWeek');
-                            });
-                            // タイムライン列は border-collapse に影響されない絶対配置 div を挿入
-                            document.querySelectorAll('#fc .fc-timegrid-col').forEach((el, i) => {
+                            // ヘッダー: 絶対配置 div をセル直下に挿入（border-leftより正確に揃う）
+                            document.querySelectorAll('#fc .fc-col-header-cell').forEach((el) => {
                                 el.querySelectorAll('.fc-week-lane-divider').forEach(d => d.remove());
-                                if (i > 0 && viewType === 'timeGridWeek') {
+                                if (viewType === 'timeGridWeek') {
+                                    el.style.position = 'relative';
+                                    const div = document.createElement('div');
+                                    div.className = 'fc-week-lane-divider';
+                                    el.insertBefore(div, el.firstChild);
+                                } else {
+                                    el.style.position = '';
+                                }
+                            });
+                            // タイムライン列: 全列（i=0 含む）に挿入（軸の border-right を置き換え）
+                            document.querySelectorAll('#fc .fc-timegrid-col').forEach((el) => {
+                                el.querySelectorAll('.fc-week-lane-divider').forEach(d => d.remove());
+                                if (viewType === 'timeGridWeek') {
                                     const frame = el.querySelector('.fc-timegrid-col-frame') ?? el;
                                     const div = document.createElement('div');
                                     div.className = 'fc-week-lane-divider';
