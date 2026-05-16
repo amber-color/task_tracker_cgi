@@ -657,12 +657,13 @@
             return allTasks.filter(t => t.date === date);
         }
 
-        async function apiCall(body) {
+        async function apiCall(body, keepalive = false) {
             try {
                 const res = await fetch('api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify(body),
+                    keepalive
                 });
                 if (res.status === 401) { location.href = 'login.html'; return null; }
                 return await res.json();
@@ -1248,7 +1249,9 @@
                 const isMobile = window.matchMedia('(max-width: 800px)').matches;
 
                 const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? '3');
-                document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[slotLevel - 1] + 'px');
+                const slotPx = SLOT_HEIGHTS[slotLevel - 1] + 'px';
+                console.log('[SlotHeight] DB value:', userSettings['slotHeightLevel'], '→ level:', slotLevel, '→', slotPx);
+                document.documentElement.style.setProperty('--slot-height', slotPx);
 
                 let weekdaysOnly = !isMobile && userSettings['weekdaysOnly'] === '1';
                 document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
