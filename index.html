@@ -1245,18 +1245,16 @@
                     await loadTasks();
                 }
 
-                const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
                 const isMobile = window.matchMedia('(max-width: 800px)').matches;
 
-                const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? '3');
+                const slotLevel = parseInt(localStorage.getItem('slotHeightLevel') ?? '3');
                 const slotPx = SLOT_HEIGHTS[slotLevel - 1] + 'px';
-                console.log('[SlotHeight] DB value:', userSettings['slotHeightLevel'], '→ level:', slotLevel, '→', slotPx);
                 document.documentElement.style.setProperty('--slot-height', slotPx);
 
-                let weekdaysOnly = !isMobile && userSettings['weekdaysOnly'] === '1';
+                let weekdaysOnly = !isMobile && localStorage.getItem('weekdaysOnly') === '1';
                 document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
 
-                const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? 'timeGridDay');
+                const savedView = isMobile ? 'timeGridDay' : (localStorage.getItem('calendarView') ?? 'timeGridDay');
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
@@ -1342,10 +1340,9 @@
                 requestAnimationFrame(() => calendar.updateSize());
 
                 // BFCache（戻るボタン）からの復元時にスロット高さを再適用
-                window.addEventListener('pageshow', async (event) => {
+                window.addEventListener('pageshow', (event) => {
                     if (!event.persisted) return;
-                    const fresh = await apiCall({ action: 'get_settings' }) ?? {};
-                    const lvl = parseInt(fresh['slotHeightLevel'] ?? '3');
+                    const lvl = parseInt(localStorage.getItem('slotHeightLevel') ?? '3');
                     document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[lvl - 1] + 'px');
                     if (calendar) calendar.updateSize();
                 });
@@ -1355,14 +1352,14 @@
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         calendar.changeView(btn.dataset.view);
-                        apiCall({ action: 'save_setting', key: 'calendarView', value: btn.dataset.view });
+                        localStorage.setItem('calendarView', btn.dataset.view);
                     });
                 });
                 document.getElementById('weekdayBtn').addEventListener('click', () => {
                     weekdaysOnly = !weekdaysOnly;
                     document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
                     calendar.setOption('weekends', !weekdaysOnly);
-                    apiCall({ action: 'save_setting', key: 'weekdaysOnly', value: weekdaysOnly ? '1' : '0' });
+                    localStorage.setItem('weekdaysOnly', weekdaysOnly ? '1' : '0');
                 });
 
                 new Sortable(tasksEl, {
