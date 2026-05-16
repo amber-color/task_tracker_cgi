@@ -450,14 +450,20 @@
         emptyEl.textContent = 'テンプレートはありません';
         const result = await apiCall({ action: 'list_templates' });
         if (!Array.isArray(result)) {
-            emptyEl.style.display = '';
-            emptyEl.textContent = result === null
-                ? '⚠ 読み込みエラー（ページを再読み込みしてください）'
-                : 'テンプレートはありません';
+            // API失敗時はlocalStorageキャッシュにフォールバック
+            const cached = JSON.parse(localStorage.getItem('tpl_cache') ?? 'null');
+            if (Array.isArray(cached)) {
+                templates = cached;
+                renderTemplateList();
+            } else {
+                emptyEl.style.display = '';
+                emptyEl.textContent = '⚠ 読み込みエラー（ページを再読み込みしてください）';
+            }
             console.error('list_templates result:', result);
             return;
         }
         templates = result;
+        localStorage.setItem('tpl_cache', JSON.stringify(result));
         renderTemplateList();
     }
 
@@ -610,6 +616,7 @@
         const result = await apiCall({ action: 'delete_template', id });
         if (result?.ok) {
             templates = templates.filter(t => t.id !== id);
+            localStorage.setItem('tpl_cache', JSON.stringify(templates));
             renderTemplateList();
         } else {
             alert('削除に失敗しました: ' + (result?.error || '不明なエラー'));
@@ -684,6 +691,7 @@
         } else {
             templates.push(result.template);
         }
+        localStorage.setItem('tpl_cache', JSON.stringify(templates));
         renderTemplateList();
         document.getElementById('tplModal').classList.remove('open');
     });
@@ -715,19 +723,16 @@
             localStorage.setItem('startTime', startTimeInput.value);
         });
 
-        const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
         const slotHeightInput = document.getElementById('slotHeightInput');
-        slotHeightInput.value = userSettings['slotHeightLevel'] ?? '3';
+        slotHeightInput.value = localStorage.getItem('slotHeightLevel') ?? '3';
         slotHeightInput.addEventListener('change', () => {
-            // keepalive:true でページ離脱直後でもDBへの保存を保証する
-            apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value }, true);
+            localStorage.setItem('slotHeightLevel', slotHeightInput.value);
         });
 
         // BFCache（ブラウザの戻るボタン）からの復元時に設定を再読み込み
         window.addEventListener('pageshow', async (event) => {
             if (event.persisted) {
-                const fresh = await apiCall({ action: 'get_settings' }) ?? {};
-                slotHeightInput.value = fresh['slotHeightLevel'] ?? '3';
+                slotHeightInput.value = localStorage.getItem('slotHeightLevel') ?? '3';
                 await loadTemplates();
             }
         });
