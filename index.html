@@ -251,14 +251,8 @@
             overflow-y: auto;
         }
 
-        /* 週表示: 日ごとの境界線
-           .fc-timegrid-col-frame は div なので border-collapse 非依存 */
-        #calendar .fc-timeGridWeek-view td.fc-timegrid-col ~ td.fc-timegrid-col > .fc-timegrid-col-frame {
-            border-left: 1px solid #ddd;
-        }
-        #calendar .fc-timeGridWeek-view .fc-col-header-cell ~ .fc-col-header-cell {
-            border-left: 1px solid #ddd !important;
-        }
+        /* 週表示: 日ごとの境界線は datesSet 内で JS が付与する */
+        .fc-week-col-divider { border-left: 2px solid #ccc !important; }
 
         .task-actions {
             display: flex;
@@ -637,7 +631,7 @@
             "#9FA8DA", "#90CAF9", "#80DEEA", "#80CBC4",
             "#A5D6A7", "#C5E1A5", "#FFF176", "#FFE082"
         ];
-        let currentDate;
+        let currentDate = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
         let calendar;
         let editingId = null;
         let pendingNewTask = null;
@@ -645,9 +639,6 @@
         let startTime = localStorage.getItem('startTime') || '09:00';
 
         const SLOT_HEIGHTS = [36, 60, 90, 120, 150];
-        // localStorage から即時反映（DB 取得前の初期表示用）
-        const _initSlotLevel = parseInt(localStorage.getItem('slotHeightLevel') || '3');
-        document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[_initSlotLevel - 1] + 'px');
         const endTimeDisplay = document.getElementById("endTimeDisplay");
         document.getElementById("startTimeDisplay").textContent = startTime;
 
@@ -1247,14 +1238,13 @@
                 const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
                 const isMobile = window.matchMedia('(max-width: 800px)').matches;
 
-                const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? localStorage.getItem('slotHeightLevel') ?? '3');
+                const slotLevel = parseInt(userSettings['slotHeightLevel'] ?? '3');
                 document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[slotLevel - 1] + 'px');
-                localStorage.setItem('slotHeightLevel', String(slotLevel));
 
                 let weekdaysOnly = !isMobile && userSettings['weekdaysOnly'] === '1';
                 document.getElementById('weekdayBtn').classList.toggle('active', weekdaysOnly);
 
-                const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? localStorage.getItem('calendarView') ?? 'timeGridDay');
+                const savedView = isMobile ? 'timeGridDay' : (userSettings['calendarView'] ?? 'timeGridDay');
 
                 const titleEl = document.getElementById("calendarTitle");
                 calendar = new FullCalendar.Calendar(document.getElementById("fc"), {
@@ -1290,6 +1280,15 @@
                         document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                             btn.classList.toggle('active', btn.dataset.view === viewType);
                         });
+                        // 週表示の日境界線を JS で付与（CSS セレクタより確実）
+                        requestAnimationFrame(() => {
+                            document.querySelectorAll('#fc .fc-timegrid-col').forEach((el, i) => {
+                                el.classList.toggle('fc-week-col-divider', i > 0 && viewType === 'timeGridWeek');
+                            });
+                            document.querySelectorAll('#fc .fc-col-header-cell').forEach((el, i) => {
+                                el.classList.toggle('fc-week-col-divider', i > 0 && viewType === 'timeGridWeek');
+                            });
+                        });
                         renderTasks();
                     },
                     eventDidMount(info) {
@@ -1319,7 +1318,6 @@
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
                     btn.addEventListener('click', () => {
                         calendar.changeView(btn.dataset.view);
-                        localStorage.setItem('calendarView', btn.dataset.view);
                         apiCall({ action: 'save_setting', key: 'calendarView', value: btn.dataset.view });
                     });
                 });
