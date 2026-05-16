@@ -410,13 +410,18 @@
     }
 
     async function apiCall(body) {
-        const res = await fetch('api.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        if (res.status === 401) { location.href = 'login.html'; return null; }
-        return res.json();
+        try {
+            const res = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.status === 401) { location.href = 'login.html'; return null; }
+            return await res.json();
+        } catch (e) {
+            console.error('API error:', e);
+            return null;
+        }
     }
 
     function describeRule(rule) {
@@ -704,8 +709,16 @@
         const slotHeightInput = document.getElementById('slotHeightInput');
         slotHeightInput.value = userSettings['slotHeightLevel'] ?? '3';
         slotHeightInput.addEventListener('change', () => {
-            localStorage.setItem('slotHeightLevel', slotHeightInput.value);
             apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value });
+        });
+
+        // BFCache（ブラウザの戻るボタン）からの復元時に設定を再読み込み
+        window.addEventListener('pageshow', async (event) => {
+            if (event.persisted) {
+                const fresh = await apiCall({ action: 'get_settings' }) ?? {};
+                slotHeightInput.value = fresh['slotHeightLevel'] ?? '3';
+                await loadTemplates();
+            }
         });
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {
