@@ -63,6 +63,28 @@ function getDB(): PDO {
 
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_tasks_template_id ON tasks(template_id)");
 
+    // Idempotent column migrations for repeat_templates table
+    $tplCols = $pdo->query("PRAGMA table_info(repeat_templates)")->fetchAll(PDO::FETCH_ASSOC);
+    $tplColNames = array_column($tplCols, 'name');
+    if (!in_array('fixed_start_time', $tplColNames)) {
+        $pdo->exec("ALTER TABLE repeat_templates ADD COLUMN fixed_start_time TEXT NOT NULL DEFAULT ''");
+    }
+    if (!in_array('skipped_dates', $tplColNames)) {
+        $pdo->exec("ALTER TABLE repeat_templates ADD COLUMN skipped_dates TEXT NOT NULL DEFAULT '[]'");
+    }
+    if (!in_array('generated_count', $tplColNames)) {
+        $pdo->exec("ALTER TABLE repeat_templates ADD COLUMN generated_count INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!in_array('memo', $tplColNames)) {
+        $pdo->exec("ALTER TABLE repeat_templates ADD COLUMN memo TEXT NOT NULL DEFAULT ''");
+    }
+    if (!in_array('url', $tplColNames)) {
+        $pdo->exec("ALTER TABLE repeat_templates ADD COLUMN url TEXT NOT NULL DEFAULT ''");
+    }
+    if (!in_array('color', $tplColNames)) {
+        $pdo->exec("ALTER TABLE repeat_templates ADD COLUMN color TEXT NOT NULL DEFAULT '#B2DFDB'");
+    }
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS user_settings (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         key     TEXT    NOT NULL,
