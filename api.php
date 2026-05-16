@@ -561,8 +561,7 @@ if ($action === 'save_setting') {
     $value = $data['value'] ?? '';
     if ($key === '') { http_response_code(400); echo json_encode(['ok' => false]); exit; }
     $stmt = $pdo->prepare(
-        'INSERT INTO user_settings(user_id, key, value) VALUES(?,?,?)
-         ON CONFLICT(user_id, key) DO UPDATE SET value=excluded.value'
+        'INSERT OR REPLACE INTO user_settings(user_id, key, value) VALUES(?,?,?)'
     );
     $stmt->execute([$userId, $key, $value]);
     echo json_encode(['ok' => true]);
