@@ -53,7 +53,7 @@
             align-items: center;
             background: #fff;
             border-bottom: 1px solid #eee;
-            padding: 10px 24px;
+            padding: 8px 20px;
         }
 
         #topBarInner {
@@ -61,64 +61,130 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 24px;
+            gap: 10px;
         }
 
         #calendarControls {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 6px;
         }
 
-        #calendarControls button {
-            background-color: #e0e0e5;
+        /* ‹ › ナビゲーション */
+        #prevBtn, #nextBtn {
+            background: #e8e8ed;
             border: none;
             border-radius: 8px;
-            padding: 4px 10px;
-            font-size: 16px;
-            color: #333;
+            width: 32px;
+            height: 32px;
+            font-size: 15px;
+            color: #444;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background 0.13s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        #prevBtn:hover, #nextBtn:hover { background: #d0d0d6; }
+
+        /* 日付タイトル */
+        #calendarTitle {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            min-width: 100px;
+            text-align: center;
+            user-select: none;
         }
 
+        /* セグメントコントロール（日・週・月） */
         #viewSwitcher {
             display: flex;
-            gap: 4px;
+            background: #e8e8ed;
+            border-radius: 9px;
+            padding: 3px;
+            gap: 2px;
         }
 
         .view-btn {
-            background: #e0e0e5;
+            background: transparent;
             border: none;
-            border-radius: 8px;
-            padding: 4px 10px;
-            font-size: 14px;
-            color: #333;
+            border-radius: 7px;
+            padding: 0 11px;
+            height: 26px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #777;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.12s ease;
+            white-space: nowrap;
+        }
+        .view-btn:hover:not(.active) { color: #333; }
+        .view-btn.active {
+            background: #fff;
+            color: #222;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.06);
         }
 
-        .view-btn.active {
+        /* 平日トグルボタン */
+        #weekdayBtn {
+            background: #e8e8ed;
+            border: none;
+            border-radius: 8px;
+            padding: 0 12px;
+            height: 32px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.13s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        #weekdayBtn:hover { background: #d0d0d6; }
+        #weekdayBtn.active {
             background: #333;
             color: #fff;
         }
 
+        /* 右側エリア */
         #timebar {
             color: #333;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
+            flex-shrink: 0;
         }
 
         #timebar input[type="time"] {
             border: none;
             background: transparent;
-            font-size: 16px;
+            font-size: 14px;
             font-family: inherit;
             padding: 0;
             height: auto;
             appearance: textfield;
             cursor: pointer;
         }
+
+        /* ダッシュボード・設定ボタン */
+        #dashboardBtn, #settingsBtn {
+            background: #e8e8ed;
+            border: none;
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            font-size: 15px;
+            color: #444;
+            cursor: pointer;
+            transition: background 0.13s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        #dashboardBtn:hover, #settingsBtn:hover { background: #d0d0d6; }
 
         /* コンテンツエリア */
         #container {
@@ -154,11 +220,12 @@
         }
 
         @media screen and (max-width: 800px) {
-            #mobileBar { padding: 8px 12px; }
+            #mobileBar { padding: 6px 12px; }
             .omit-text { display: none; }
             #viewSwitcher { display: none; }
+            #weekdayBtn { display: none; }
             #topBarInner { gap: 8px; }
-            #calendarControls { gap: 8px; }
+            #calendarControls { gap: 6px; }
         }
 
         #tasks {
@@ -554,23 +621,23 @@
             <div id="mobileBar">
                 <div id="topBarInner">
                     <div id="calendarControls">
-                        <button id="prevBtn">&lt;</button>
+                        <button id="prevBtn">‹</button>
                         <span id="calendarTitle"></span>
-                        <button id="nextBtn">&gt;</button>
+                        <button id="nextBtn">›</button>
                         <div id="viewSwitcher">
                             <button class="view-btn active" data-view="timeGridDay">日</button>
                             <button class="view-btn" data-view="timeGridWeek">週</button>
                             <button class="view-btn" data-view="dayGridMonth">月</button>
-                            <button id="weekdayBtn" class="view-btn">平日</button>
                         </div>
+                        <button id="weekdayBtn">平日</button>
                     </div>
                     <div id="timebar">
-                        <button id="dashboardBtn">📊</button>
-                        <div>
-                            <span>開始<span class="omit-text">時刻:</span> <span id="startTimeDisplay">09:00</span></span>
-                            <br><span>終了<span class="omit-text">予定:</span> <span id="endTimeDisplay">--:--</span></span>
+                        <button id="dashboardBtn" title="ダッシュボード">📊</button>
+                        <div style="font-size:13px;line-height:1.5;color:#555;">
+                            <span>開始 <span id="startTimeDisplay">09:00</span></span>
+                            <br><span>終了 <span id="endTimeDisplay">--:--</span></span>
                         </div>
-                        <button id="settingsBtn" title="設定" style="background:#e0e0e5;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:14px;">⚙</button>
+                        <button id="settingsBtn" title="設定">⚙</button>
                     </div>
                 </div>
             </div>
