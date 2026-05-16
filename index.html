@@ -1338,6 +1338,15 @@
                 calendar.render();
                 requestAnimationFrame(() => calendar.updateSize());
 
+                // BFCache（戻るボタン）からの復元時にスロット高さを再適用
+                window.addEventListener('pageshow', async (event) => {
+                    if (!event.persisted) return;
+                    const fresh = await apiCall({ action: 'get_settings' }) ?? {};
+                    const lvl = parseInt(fresh['slotHeightLevel'] ?? '3');
+                    document.documentElement.style.setProperty('--slot-height', SLOT_HEIGHTS[lvl - 1] + 'px');
+                    if (calendar) calendar.updateSize();
+                });
+
                 document.getElementById("prevBtn").onclick = () => { calendar.prev(); };
                 document.getElementById("nextBtn").onclick = () => { calendar.next(); };
                 document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
