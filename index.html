@@ -291,8 +291,13 @@
         #task-toolbar button:hover { background: #f0f0f0; color: #333; transform: none; }
         #task-toolbar button.active { background: #333; color: #fff; }
 
+        @keyframes breathe {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.65; }
+        }
         .working {
             border: 2px solid red;
+            animation: breathe 1.8s ease-in-out infinite;
         }
 
         #newtask {
