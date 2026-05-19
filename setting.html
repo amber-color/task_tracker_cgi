@@ -64,6 +64,12 @@
             padding: 8px 0;
         }
         .setting-row label { font-size: 15px; color: #333; }
+        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 26px; transition: background 0.2s; cursor: pointer; }
+        .toggle-slider::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .toggle-switch input:checked + .toggle-slider { background: #333; }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
         .setting-row input[type="time"] {
             padding: 6px 10px;
             border: 1px solid #ccc;
@@ -257,6 +263,17 @@
                 <input type="range" id="slotHeightInput" min="1" max="5" step="1">
                 <span class="slot-label">大</span>
             </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>タスク</h2>
+        <div class="setting-row">
+            <label>完了後に次のタスクを自動開始</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="autoStartNextInput">
+                <span class="toggle-slider"></span>
+            </label>
         </div>
     </div>
 
@@ -720,10 +737,12 @@
 
         const startTimeInput = document.getElementById('startTimeInput');
         const slotHeightInput = document.getElementById('slotHeightInput');
+        const autoStartNextInput = document.getElementById('autoStartNextInput');
 
         // まずlocalStorageで即時表示
         startTimeInput.value = localStorage.getItem('startTime') ?? '09:00';
         slotHeightInput.value = localStorage.getItem('slotHeightLevel') ?? '3';
+        autoStartNextInput.checked = (localStorage.getItem('autoStartNext') ?? '0') === '1';
 
         // SQLiteから正規値を取得してlocalStorageと同期
         const userSettings = await apiCall({ action: 'get_settings' }) ?? {};
@@ -735,6 +754,10 @@
             slotHeightInput.value = userSettings['slotHeightLevel'];
             localStorage.setItem('slotHeightLevel', userSettings['slotHeightLevel']);
         }
+        if (userSettings['autoStartNext'] != null) {
+            autoStartNextInput.checked = userSettings['autoStartNext'] === '1';
+            localStorage.setItem('autoStartNext', userSettings['autoStartNext']);
+        }
 
         // 変更時はSQLiteとlocalStorage両方に保存
         startTimeInput.addEventListener('change', () => {
@@ -744,6 +767,11 @@
         slotHeightInput.addEventListener('change', () => {
             localStorage.setItem('slotHeightLevel', slotHeightInput.value);
             apiCall({ action: 'save_setting', key: 'slotHeightLevel', value: slotHeightInput.value }, true);
+        });
+        autoStartNextInput.addEventListener('change', () => {
+            const val = autoStartNextInput.checked ? '1' : '0';
+            localStorage.setItem('autoStartNext', val);
+            apiCall({ action: 'save_setting', key: 'autoStartNext', value: val });
         });
 
         // BFCache（ブラウザの戻るボタン）からの復元時に設定を再読み込み
