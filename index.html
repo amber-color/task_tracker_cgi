@@ -1424,10 +1424,7 @@
                 clearTimeout(reshowTimer);
                 reshowTimer = setTimeout(() => bar.classList.remove('hidden'), 1000);
             }
-            document.addEventListener('click', (e) => {
-                if (!bar.contains(e.target)) hideBar();
-            });
-            document.addEventListener('focusin', (e) => {
+            document.addEventListener('pointerdown', (e) => {
                 if (!bar.contains(e.target)) hideBar();
             });
         })();
