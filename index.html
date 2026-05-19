@@ -300,6 +300,30 @@
             animation: breathe 1.8s ease-in-out infinite;
         }
 
+        #quickAddBar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200;
+            background: #fff;
+            border-radius: 999px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
+            padding: 10px 22px;
+            display: flex;
+            align-items: center;
+            width: min(420px, 80vw);
+        }
+        #quickAddInput {
+            border: none;
+            outline: none;
+            font-size: 15px;
+            width: 100%;
+            background: transparent;
+            color: #333;
+        }
+        #quickAddInput::placeholder { color: #bbb; }
+
         #newtask {
             padding: 10px;
             border-top: 1px solid #ccc;
@@ -690,6 +714,9 @@
                     <div id="fc"></div>
                 </div>
 
+            </div>
+            <div id="quickAddBar">
+                <input type="text" id="quickAddInput" placeholder="タスクを追加… (Enter で確定)" autocomplete="off">
             </div>
         </div>
     </div>
@@ -1354,6 +1381,30 @@
                 .map(t => t.id);
             apiCall({ action: 'reorder', date: currentDate, order: ids });
             renderTasks();
+        });
+
+        document.getElementById('quickAddInput').addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            const title = e.target.value.trim();
+            if (!title) return;
+            const tasks = getTasks(currentDate);
+            const maxOrder = tasks.length ? Math.max(...tasks.map(t => t.order)) : -1;
+            const newTask = {
+                id: Date.now().toString(),
+                date: currentDate,
+                title,
+                memo: '', url: '', done: false, actual: 0, startTime: 0, scheduledTime: '',
+                color: colorList[tasks.length % colorList.length],
+                estimate: 15,
+                order: maxOrder + 1,
+                repeatDays: [],
+                templateId: null,
+            };
+            allTasks.push(newTask);
+            syncLocal();
+            apiCall({ action: 'add', task: newTask });
+            renderTasks();
+            e.target.value = '';
         });
 
         document.addEventListener("DOMContentLoaded", () => {
